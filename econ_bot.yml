@@ -1,0 +1,61 @@
+name: Economic Indicator Bot
+
+on:
+  # 1) cron-job.org 등 외부 서비스가 GitHub API로 이 이벤트를 호출해서 트리거한다.
+  #    (GitHub 자체 schedule은 혼잡 시 지연이 심해서, 몇 분 이내 알림이 필요한 이 작업의
+  #     "주" 트리거로는 권장하지 않는다 - README 참고)
+  repository_dispatch:
+    types: [poll]
+
+  # 2) 수동 실행(테스트용)
+  workflow_dispatch: {}
+
+  # 3) 보조 백업 트리거. 5분 간격으로 시도하되, GitHub 인프라 상황에 따라
+  #    수십 분~수 시간 지연될 수 있음을 감안한다(그래도 안 하는 것보단 낫다).
+  schedule:
+    - cron: "*/15 * * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: econ-bot-run
+  cancel-in-progress: false
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run bot
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          DAILY_DIGEST_TIME_KST: ${{ vars.DAILY_DIGEST_TIME_KST }}
+          DAILY_DIGEST_WINDOW_MINUTES: ${{ vars.DAILY_DIGEST_WINDOW_MINUTES }}
+        run: python -m bot.main
+
+      - name: Commit updated state (if changed)
+        run: |
+          if ! git diff --quiet -- state.json; then
+            git config user.name "econ-bot"
+            git config user.email "econ-bot@users.noreply.github.com"
+            git add state.json
+            git commit -m "chore: update bot state [skip ci]"
+            git push
+          else
+            echo "state.json 변경 없음 - 커밋 생략"
+          fi
