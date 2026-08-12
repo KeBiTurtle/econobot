@@ -1,4 +1,17 @@
 {
-  "last_daily_digest_date": null,
-  "events": {}
+  "events": {
+    "67a4acb57df47376": {
+      "date": "2026-08-13",
+      "interpretation_sent": false,
+      "pre_announced": false,
+      "result_sent": false
+    },
+    "6bfa523f7d693ea9": {
+      "date": "2026-08-13",
+      "interpretation_sent": false,
+      "pre_announced": false,
+      "result_sent": false
+    }
+  },
+  "last_daily_digest_date": null
 }
