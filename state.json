@@ -2,14 +2,14 @@
   "events": {
     "67a4acb57df47376": {
       "date": "2026-08-13",
-      "interpretation_sent": false,
+      "interpretation_sent": true,
       "pre_announced": true,
       "result_sent": true,
       "result_sent_at": "2026-08-13T23:48:21.792589+09:00"
     },
     "6bfa523f7d693ea9": {
       "date": "2026-08-13",
-      "interpretation_sent": false,
+      "interpretation_sent": true,
       "pre_announced": true,
       "result_sent": true,
       "result_sent_at": "2026-08-13T23:48:21.792589+09:00"
