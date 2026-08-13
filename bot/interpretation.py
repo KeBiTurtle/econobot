@@ -86,16 +86,21 @@ def format_result_message(event: Dict[str, Any]) -> str:
 # 연준 핵심지표 세부 해석
 # ---------------------------------------------------------------------------
 
-def _trend_text(mom_trend):
+def _trend_text(
+    mom_trend,
+    rising="최근 3개월간 상승 압력이 다시 확대되는 흐름입니다.",
+    falling="최근 3개월간 둔화(디스인플레이션) 흐름이 이어지고 있습니다.",
+    flat="최근 3개월간 큰 방향성 변화 없이 횡보하고 있습니다.",
+):
     vals = [v for v in mom_trend if v is not None]
     if len(vals) < 3:
         return ""
     recent = vals[-3:]
     if recent[-1] > recent[0]:
-        return "최근 3개월간 상승 압력이 다시 확대되는 흐름입니다."
+        return rising
     elif recent[-1] < recent[0]:
-        return "최근 3개월간 둔화(디스인플레이션) 흐름이 이어지고 있습니다."
-    return "최근 3개월간 큰 방향성 변화 없이 횡보하고 있습니다."
+        return falling
+    return flat
 
 
 def interpret_cpi_or_pce(event: Dict[str, Any], fred_api_key: str, label_kr: str) -> str:
@@ -207,6 +212,149 @@ def interpret_fomc(event: Dict[str, Any], fred_api_key: str) -> str:
     return "\n".join(lines)
 
 
+def interpret_ppi(event: Dict[str, Any], fred_api_key: str) -> str:
+    ind = INDICATOR_BY_KEY["ppi"]
+    headline_series = ind["fred"]["headline_index"]
+    core_series = ind["fred"]["core_index"]
+
+    lines = ["\U0001F50D <b>PPI(생산자물가) 세부 해석</b>"]
+    if not fred_api_key:
+        lines.append("(FRED_API_KEY가 설정되지 않아 세부 해석 대신 발표치만 안내합니다.)")
+        return "\n".join(lines)
+
+    headline = fred_client.mom_yoy(headline_series, fred_api_key)
+    core = fred_client.mom_yoy(core_series, fred_api_key)
+
+    if headline:
+        lines.append(
+            f"• 헤드라인 PPI — 전월비(MoM): {headline.get('mom_pct')}%,  전년동월비(YoY): {headline.get('yoy_pct')}%"
+        )
+    if core:
+        lines.append(
+            f"• 근원(Core, 식품·에너지 제외) — 전월비(MoM): {core.get('mom_pct')}%,  전년동월비(YoY): {core.get('yoy_pct')}%"
+        )
+        trend_txt = _trend_text(core.get("mom_trend_6m", []))
+        if trend_txt:
+            lines.append(f"  → {trend_txt}")
+    lines.append(
+        "\nℹ️ 참고: PPI(생산자물가)는 기업이 원자재·중간재 구입에 지불하는 가격입니다. "
+        "이 원가 압력은 보통 시차를 두고 소비자물가(CPI/PCE)에 전가되는 경향이 있어, "
+        "시장은 PPI를 향후 CPI/PCE 흐름을 가늠하는 선행 신호 중 하나로 참고합니다."
+    )
+    return "\n".join(lines)
+
+
+def interpret_gdp(event: Dict[str, Any], fred_api_key: str) -> str:
+    ind = INDICATOR_BY_KEY["gdp"]
+    series_id = ind["fred"]["growth_rate"]
+
+    lines = ["\U0001F50D <b>GDP 성장률 세부 해석</b>"]
+    if not fred_api_key:
+        lines.append("(FRED_API_KEY가 설정되지 않아 세부 해석 대신 발표치만 안내합니다.)")
+        return "\n".join(lines)
+
+    # 주의: 이 시리즈(A191RL1Q225SBEA)는 FRED에 이미 '연율 성장률(%)'로 제공되는 값이라,
+    # CPI/PCE처럼 지수 레벨에 mom_yoy()를 적용하면 '성장률의 성장률'이라는 의미 없는 값이 나온다.
+    # 그래서 여기서는 latest_value(원값 그대로)를 쓰고, 직전 분기 대비는 직접 비교한다.
+    obs = fred_client.get_observations(series_id, fred_api_key, limit=5)
+    obs = [o for o in obs if o[1] is not None]
+    if not obs:
+        lines.append("(FRED에서 데이터를 가져오지 못했습니다.)")
+        return "\n".join(lines)
+
+    latest_date, latest_val = obs[0]
+    lines.append(f"• 실질GDP 성장률(전분기 대비, 연율 환산): {latest_val:+.1f}%")
+
+    if len(obs) >= 2:
+        prev_val = obs[1][1]
+        diff = latest_val - prev_val
+        if abs(diff) < 0.2:
+            trend_txt = f"직전 분기({prev_val:+.1f}%)와 비슷한 성장 속도를 유지하고 있습니다."
+        elif diff > 0:
+            trend_txt = f"직전 분기({prev_val:+.1f}%) 대비 성장세가 가속되고 있습니다."
+        else:
+            trend_txt = f"직전 분기({prev_val:+.1f}%) 대비 성장세가 둔화되고 있습니다."
+        lines.append(f"  → {trend_txt}")
+
+    if latest_val < 0:
+        lines.append("  → 마이너스 성장은 경기 위축 국면을 시사할 수 있어 시장의 주목도가 특히 높습니다.")
+
+    lines.append(
+        "\nℹ️ 참고: 이 수치는 계절조정 후 연율 환산된 전분기 대비 실질GDP 성장률입니다. "
+        "연준은 통화정책 결정에서 물가·고용지표를 더 직접적으로 활용하지만, "
+        "GDP는 경기 사이클 전반을 판단하는 배경지표로 함께 참고됩니다."
+    )
+    return "\n".join(lines)
+
+
+def interpret_jolts(event: Dict[str, Any], fred_api_key: str) -> str:
+    ind = INDICATOR_BY_KEY["jolts"]
+    series_id = ind["fred"]["job_openings"]
+
+    lines = ["\U0001F50D <b>JOLTS(구인·이직보고서) 세부 해석</b>"]
+    if not fred_api_key:
+        lines.append("(FRED_API_KEY가 설정되지 않아 세부 해석 대신 발표치만 안내합니다.)")
+        return "\n".join(lines)
+
+    mv = fred_client.mom_yoy(series_id, fred_api_key)
+    if mv and mv.get("latest_value") is not None:
+        level_m = mv["latest_value"] / 1000.0  # FRED는 천 단위 -> 백만 단위로 환산
+        lines.append(
+            f"• 채용공고(Job Openings): {level_m:.2f}백만 건 "
+            f"(전월비 {mv.get('mom_pct')}%, 전년비 {mv.get('yoy_pct')}%)"
+        )
+        trend_txt = _trend_text(
+            mv.get("mom_trend_6m", []),
+            rising="최근 3개월간 채용 수요가 다시 늘어나는 흐름입니다.",
+            falling="최근 3개월간 채용 수요가 둔화되는 흐름입니다.",
+            flat="최근 3개월간 채용공고 수준이 큰 변화 없이 유지되고 있습니다.",
+        )
+        if trend_txt:
+            lines.append(f"  → {trend_txt}")
+    lines.append(
+        "\nℹ️ 참고: JOLTS 채용공고는 기업의 인력 수요(노동시장 수요 측면)를 보여주는 지표로, "
+        "연준은 이를 통해 인플레이션 압력으로 이어질 수 있는 노동시장 과열/냉각 여부를 가늠합니다."
+    )
+    return "\n".join(lines)
+
+
+def interpret_initial_claims(event: Dict[str, Any], fred_api_key: str) -> str:
+    ind = INDICATOR_BY_KEY["initial_claims"]
+    series_id = ind["fred"]["level"]
+
+    lines = ["\U0001F50D <b>신규 실업수당 청구건수 세부 해석</b>"]
+    if not fred_api_key:
+        lines.append("(FRED_API_KEY가 설정되지 않아 세부 해석 대신 발표치만 안내합니다.)")
+        return "\n".join(lines)
+
+    obs = fred_client.get_observations(series_id, fred_api_key, limit=5)
+    obs = [o for o in obs if o[1] is not None]
+    if not obs:
+        lines.append("(FRED에서 데이터를 가져오지 못했습니다.)")
+        return "\n".join(lines)
+
+    latest_date, latest_val = obs[0]
+    lines.append(f"• 이번 주 신규 청구건수: {latest_val:,.0f}건")
+
+    if len(obs) >= 4:
+        avg4 = sum(v for _, v in obs[:4]) / 4
+        lines.append(f"• 최근 4주 평균: {avg4:,.0f}건")
+        diff = latest_val - avg4
+        if abs(diff) < avg4 * 0.03:
+            trend_txt = "4주 평균과 비슷한 수준으로, 뚜렷한 방향성 변화는 없습니다."
+        elif diff > 0:
+            trend_txt = "4주 평균을 웃돌아 노동시장이 다소 냉각되고 있다는 신호로 해석될 수 있습니다."
+        else:
+            trend_txt = "4주 평균을 밑돌아 노동시장이 여전히 견조하다는 신호로 해석될 수 있습니다."
+        lines.append(f"  → {trend_txt}")
+
+    lines.append(
+        "\nℹ️ 참고: 매주 발표돼 변동성이 큰 지표라 단주(單週) 수치만으로 판단하기보다, "
+        "4주 이동평균과 함께 보면 노동시장 방향성(둔화/견조)을 가장 빠르게 포착할 수 있는 지표 중 하나입니다."
+    )
+    return "\n".join(lines)
+
+
 def build_interpretation_message(event: Dict[str, Any], fred_api_key: str) -> Optional[str]:
     """fed_critical 지표에 한해 세부 해석 메시지를 만든다. 아니면 None."""
     key = event["indicator_key"]
@@ -222,28 +370,13 @@ def build_interpretation_message(event: Dict[str, Any], fred_api_key: str) -> Op
         return interpret_nfp(event, fred_api_key)
     if key == "fomc_rate_decision":
         return interpret_fomc(event, fred_api_key)
-    if key in ("ppi", "gdp", "jolts"):
-        # 일반적인 FRED 최신치/추세 안내 (레벨 or MoM/YoY)
-        sub = ind["fred"]
-        sub_label_kr = {
-            "headline_index": "헤드라인",
-            "core_index": "근원(Core, 식품·에너지 제외)",
-            "growth_rate": "성장률",
-            "job_openings": "채용공고",
-        }
-        lines = [f"\U0001F50D <b>{ind['name_kr']} 세부 해석</b>"]
-        if not fred_api_key:
-            lines.append("(FRED_API_KEY가 설정되지 않아 세부 해석 대신 발표치만 안내합니다.)")
-            return "\n".join(lines)
-        for sub_name, series_id in sub.items():
-            label = sub_label_kr.get(sub_name, sub_name)
-            mv = fred_client.mom_yoy(series_id, fred_api_key)
-            if mv:
-                lines.append(f"• {label}: MoM {mv.get('mom_pct')}%, YoY {mv.get('yoy_pct')}%")
-            else:
-                lv = fred_client.latest_value(series_id, fred_api_key)
-                if lv:
-                    lines.append(f"• {label}: 최신값 {lv.get('latest_value')} (이전 {lv.get('prev_value')})")
-        return "\n".join(lines)
+    if key == "ppi":
+        return interpret_ppi(event, fred_api_key)
+    if key == "gdp":
+        return interpret_gdp(event, fred_api_key)
+    if key == "jolts":
+        return interpret_jolts(event, fred_api_key)
+    if key == "initial_claims":
+        return interpret_initial_claims(event, fred_api_key)
 
     return None
