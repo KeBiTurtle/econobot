@@ -24,6 +24,9 @@ from .indicators import match_indicator
 FF_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
 KST = datetime.timezone(datetime.timedelta(hours=9))
 
+# ForexFactory의 impact 등급 순위. 지표별 min_impact(indicators.py)와 비교하는 데 사용.
+_IMPACT_RANK = {"Low": 0, "Medium": 1, "High": 2}
+
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                   "(KHTML, like Gecko) Chrome/124.0 Safari/537.36",
@@ -80,11 +83,16 @@ def get_week_events(today_kst: Optional[datetime.date] = None) -> List[Dict[str,
     for item in raw:
         if item.get("country") != "USD":
             continue
-        if item.get("impact") != "High":
-            continue
         title = item.get("title", "")
         ind = match_indicator(title)
         if ind is None:
+            continue
+        # 지표별 최소 impact 등급(기본 High) 이상인지 확인.
+        # ForexFactory가 관례상 Medium으로만 표기하는 지표(예: 신규 실업수당 청구건수)도
+        # 레지스트리에서 min_impact="Medium"으로 낮춰뒀으면 여기서 통과된다.
+        min_impact = ind.get("min_impact", "High")
+        impact_rank = _IMPACT_RANK.get(item.get("impact", ""), -1)
+        if impact_rank < _IMPACT_RANK.get(min_impact, 2):
             continue
         dt_kst = _parse_ff_datetime(item.get("date", ""))
         if dt_kst is None:
