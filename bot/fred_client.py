@@ -103,3 +103,74 @@ def latest_value(series_id: str, api_key: str) -> dict:
         "latest_value": latest_val,
         "prev_value": prev_val,
     }
+
+
+# ---------------------------------------------------------------------------
+# actual(실측치) 보강: ForexFactory의 actual 필드는 실제 발표 후 몇 시간이 지나도
+# 비어있는 경우가 흔하다(실측 확인됨). 그 상태로는 main.py의 "발표 결과" 단계가
+# has_actual=False로 영원히 막혀서 결과/해석 메시지가 아예 안 나가는 문제가 생긴다.
+# 여기서 FRED 공식 데이터로 캘린더의 actual을 직접 채워 그 문제를 우회한다.
+# ---------------------------------------------------------------------------
+_ACTUAL_MATCH_TABLE = [
+    # (ff_title에 포함된 키워드(소문자), FRED series_id, kind, 제외 키워드)
+    ("core cpi", "CPILFESL", "mom_yoy", []),
+    ("cpi", "CPIAUCSL", "mom_yoy", []),
+    ("core pce", "PCEPILFE", "mom_yoy", []),
+    ("pce price", "PCEPI", "mom_yoy", []),
+    ("core ppi", "PPIFES", "mom_yoy", []),
+    ("ppi", "PPIFIS", "mom_yoy", ["core"]),
+    ("unemployment rate", "UNRATE", "value", []),
+    ("non-farm employment change", "PAYEMS", "level_change", []),
+    ("nonfarm payrolls", "PAYEMS", "level_change", []),
+    ("jolts", "JTSJOL", "level_million", []),
+    ("gdp", "A191RL1Q225SBEA", "value", ["price index"]),  # GDP 가격지수는 다른 지표라 제외
+]
+
+
+def _match_actual_series(ff_title_lower: str):
+    for kw, series_id, kind, exclude in _ACTUAL_MATCH_TABLE:
+        if kw in ff_title_lower and not any(x in ff_title_lower for x in exclude):
+            return series_id, kind
+    return None, None
+
+
+def enrich_actual(events, api_key: str):
+    """캘린더 이벤트 리스트(dict, in-place로 수정)에서 actual이 비어있는데
+    FRED로 확인 가능한 지표면 공식 실측치로 채운다. 값을 지어내지 않고, 매칭되는
+    시리즈가 없거나 FRED 호출이 실패하면 조용히 건너뛴다(actual은 빈 채로 유지)."""
+    if not api_key:
+        return events
+    for e in events:
+        if e.get("actual"):
+            continue
+        title_l = e.get("ff_title", "").lower()
+        series_id, kind = _match_actual_series(title_l)
+        if not series_id:
+            continue
+        try:
+            if kind == "value":
+                lv = latest_value(series_id, api_key)
+                v = lv.get("latest_value")
+                if v is not None:
+                    e["actual"] = f"{v:.1f}%"
+            elif kind == "level_million":
+                lv = latest_value(series_id, api_key)
+                v = lv.get("latest_value")
+                if v is not None:
+                    e["actual"] = f"{v / 1000:.2f}M"  # FRED는 천 단위 -> 백만 단위로 환산
+            elif kind == "level_change":
+                lc = latest_level_change(series_id, api_key)
+                v = lc.get("change")
+                if v is not None:
+                    e["actual"] = f"{v:+.0f}K"
+            else:  # mom_yoy: 제목에 y/y가 있으면 YoY, 아니면 MoM
+                mv = mom_yoy(series_id, api_key)
+                if not mv:
+                    continue
+                use_yoy = "y/y" in title_l or "yoy" in title_l
+                val = mv.get("yoy_pct") if use_yoy else mv.get("mom_pct")
+                if val is not None:
+                    e["actual"] = f"{val:+.1f}%"
+        except Exception:
+            continue  # 이 지표 하나 실패해도 나머지는 계속 처리
+    return events
