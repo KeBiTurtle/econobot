@@ -10,8 +10,12 @@
 - fed_critical: 연준이 특히 중요하게 보는 지표인가 (True면 세부 해석 로직 적용)
 - category: 분류(물가/고용/성장/제조업&서비스/통화정책/소비)
 - unit_hint: 값 표시 시 참고용 단위 힌트
+- min_impact: 이 지표를 포함시킬 최소 ForexFactory impact 등급(기본값 "High"). 명시 안 하면 High.
+  일부 지표(예: 신규 실업수당 청구건수)는 ForexFactory가 관례적으로 Medium으로 표기하지만
+  투자자들이 널리 챙겨보는 지표라 명시적으로 낮춰서 포함시킴.
 
-주의: ForexFactory의 'impact: High'가 investing.com의 '별 3개(빨간 폭탄)'와 대체로 대응됩니다.
+주의: ForexFactory의 'impact: High'가 investing.com의 '별 3개(빨간 폭탄)'와 대체로 대응되지만
+      완전히 1:1은 아니라서, 지표별로 min_impact를 다르게 지정할 수 있게 해뒀습니다.
       국가는 USD(미국)만 다룹니다 - '연준이 중요하게 여기는 지표' 요청에 맞춤.
 """
 
@@ -130,6 +134,20 @@ INDICATORS = [
         },
         "fed_critical": True,
         "category": "고용",
+    },
+    {
+        "key": "initial_claims",
+        "name_kr": "신규 실업수당 청구건수",
+        "name_en": "Initial Jobless Claims",
+        "ff_keywords": ["unemployment claims"],  # ForexFactory에서 이 지표의 실제 title
+        "fred": {
+            "level": "ICSA",  # Initial Claims, 주간, 계절조정
+        },
+        "fed_critical": True,
+        "category": "고용",
+        # ForexFactory가 이 지표를 보통 Medium(주황)으로 표기해서 impact=="High" 필터에 걸리지만,
+        # 매주 발표되는 대표적인 노동시장 체감 지표라 투자자들이 널리 챙겨봄 -> High 요구를 낮춰서 포함.
+        "min_impact": "Medium",
     },
     {
         "key": "consumer_confidence",
