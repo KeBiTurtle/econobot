@@ -124,6 +124,7 @@ _ACTUAL_MATCH_TABLE = [
     ("nonfarm payrolls", "PAYEMS", "level_change", []),
     ("jolts", "JTSJOL", "level_million", []),
     ("gdp", "A191RL1Q225SBEA", "value", ["price index"]),  # GDP 가격지수는 다른 지표라 제외
+    ("unemployment claims", "ICSA", "level_thousand", []),
 ]
 
 
@@ -163,6 +164,11 @@ def enrich_actual(events, api_key: str):
                 v = lc.get("change")
                 if v is not None:
                     e["actual"] = f"{v:+.0f}K"
+            elif kind == "level_thousand":
+                lv = latest_value(series_id, api_key)
+                v = lv.get("latest_value")
+                if v is not None:
+                    e["actual"] = f"{v / 1000:.0f}K"  # ForexFactory 표기(예: 202K)와 단위 맞춤
             else:  # mom_yoy: 제목에 y/y가 있으면 YoY, 아니면 MoM
                 mv = mom_yoy(series_id, api_key)
                 if not mv:
