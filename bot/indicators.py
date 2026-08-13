@@ -60,7 +60,10 @@ INDICATORS = [
         "name_en": "PPI",
         "ff_keywords": ["ppi", "producer price index"],
         "fred": {
-            "headline_index": "PPIACO",
+            # PPIACO(구 상품분류체계, All Commodities)는 언론/캘린더가 말하는 헤드라인 "PPI m/m"과
+            # 다른 지표라서 잘못 매핑돼 있었음 -> BLS Final Demand 체계의 PPIFIS(헤드라인)로 교체.
+            "headline_index": "PPIFIS",
+            "core_index": "PPIFES",   # Final Demand Less Food & Energy (근원 PPI)
         },
         "fed_critical": True,
         "category": "물가",
