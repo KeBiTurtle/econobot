@@ -18,6 +18,7 @@ import traceback
 
 from .config import Config, ConfigError
 from . import calendar_source
+from . import fred_client
 from . import interpretation
 from . import state as state_mod
 from .telegram_client import send_message
@@ -48,6 +49,16 @@ def run() -> None:
         print(f"[WARN] 캘린더 조회 실패: {exc}", file=sys.stderr)
         traceback.print_exc()
         today_events = []
+
+    # ForexFactory의 actual 필드는 발표 후 한참 지나도 안 채워지는 경우가 있어(실측 확인됨),
+    # FRED_API_KEY가 있으면 공식 데이터로 actual을 보강한다. 안 그러면 아래 2)/3) 단계가
+    # has_actual=False에 계속 막혀서 결과/해석 메시지가 영원히 안 나가는 문제가 생긴다.
+    if cfg.fred_api_key and today_events:
+        try:
+            fred_client.enrich_actual(today_events, cfg.fred_api_key)
+        except Exception as exc:
+            print(f"[WARN] FRED actual 보강 실패: {exc}", file=sys.stderr)
+            traceback.print_exc()
 
     # --- 1) 사전 공지 ---------------------------------------------------
     if state.get("last_daily_digest_date") != today_str and _within_digest_window(
