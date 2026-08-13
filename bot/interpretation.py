@@ -225,18 +225,25 @@ def build_interpretation_message(event: Dict[str, Any], fred_api_key: str) -> Op
     if key in ("ppi", "gdp", "jolts"):
         # 일반적인 FRED 최신치/추세 안내 (레벨 or MoM/YoY)
         sub = ind["fred"]
+        sub_label_kr = {
+            "headline_index": "헤드라인",
+            "core_index": "근원(Core, 식품·에너지 제외)",
+            "growth_rate": "성장률",
+            "job_openings": "채용공고",
+        }
         lines = [f"\U0001F50D <b>{ind['name_kr']} 세부 해석</b>"]
         if not fred_api_key:
             lines.append("(FRED_API_KEY가 설정되지 않아 세부 해석 대신 발표치만 안내합니다.)")
             return "\n".join(lines)
         for sub_name, series_id in sub.items():
+            label = sub_label_kr.get(sub_name, sub_name)
             mv = fred_client.mom_yoy(series_id, fred_api_key)
             if mv:
-                lines.append(f"• {sub_name}: MoM {mv.get('mom_pct')}%, YoY {mv.get('yoy_pct')}%")
+                lines.append(f"• {label}: MoM {mv.get('mom_pct')}%, YoY {mv.get('yoy_pct')}%")
             else:
                 lv = fred_client.latest_value(series_id, fred_api_key)
                 if lv:
-                    lines.append(f"• {sub_name}: 최신값 {lv.get('latest_value')} (이전 {lv.get('prev_value')})")
+                    lines.append(f"• {label}: 최신값 {lv.get('latest_value')} (이전 {lv.get('prev_value')})")
         return "\n".join(lines)
 
     return None
