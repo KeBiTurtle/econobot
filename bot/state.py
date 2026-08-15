@@ -16,6 +16,7 @@ DEFAULT_STATE = {
     "events": {},
     # events[event_id] = {
     #   "pre_announced": bool,
+    #   "t15_sent": bool,           # 발표 15분 전 사전 알림을 보냈는가
     #   "result_sent": bool,
     #   "interpretation_sent": bool,
     #   "date": "YYYY-MM-DD",
