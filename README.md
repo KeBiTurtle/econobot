@@ -3,8 +3,9 @@
 별 3개(★★★)급 미국 경제지표를 텔레그램으로 자동 발송하는 봇입니다.
 
 - 발표 당일 아침, 오늘 어떤 지표가 나오는지 사전 공지
+- 발표 약 15분 전, "곧 발표됩니다" 알림 (cron-job.org로 1~5분마다 계속 깨어있기 때문에 가능)
 - 발표 직후 실제치 vs 예상치(컨센서스) 비교 (상회/부합/하회)
-- 연준(Fed)이 중요하게 보는 지표(CPI, PCE, 고용지표, GDP, FOMC 등)는 몇 분 뒤 세부 해석 추가 발송
+- 연준(Fed)이 중요하게 보는 지표(CPI, PCE, 고용지표, PPI, GDP, JOLTS, 신규 실업수당 청구건수, FOMC 등)는 몇 분 뒤 세부 해석 추가 발송 — 수치가 금리 정책과 어떻게 연결되는지 "🏦 연준(Fed) 관점" 문단으로 매파적/비둘기적 여지를 설명
 - 완전 무료 구성(GitHub Actions + cron-job.org + FRED 무료 API)
 
 ---
@@ -32,15 +33,31 @@ cron-job.org(무료, 1~5분 간격) --HTTP 요청--> GitHub API(repository_dispa
 ## 2. 준비물 체크리스트
 
 - [ ] GitHub 계정 (무료)
-- [ ] 이미 만들어두신 텔레그램 봇의 **토큰**과, 알림을 받을 **chat_id**
+- [ ] 텔레그램 봇 **토큰**과, 알림을 받을 **chat_id** (없다면 3~4단계에서 만듭니다)
 - [ ] FRED(세인트루이스 연은) 무료 API 키
 - [ ] cron-job.org 계정 (무료)
 
 ---
 
-## 3. 텔레그램 chat_id 알아내기
+## 3. 텔레그램 봇 만들기 (BotFather)
 
-BotFather로 봇은 이미 만드셨고, 봇과 대화(메시지 1개 전송)까지 하신 상태라고 하셨습니다. 이제 chat_id만 알아내면 됩니다.
+아직 봇이 없다면 여기서부터 시작하세요. 이미 봇을 만들어두셨다면 4단계로 건너뛰세요.
+
+1. 텔레그램 앱에서 **@BotFather** 를 검색해 대화를 시작합니다 (공식 계정, 파란 체크 표시 확인).
+2. `/newbot` 명령을 보냅니다.
+3. 봇 이름(표시 이름, 아무거나)을 입력합니다. 예: `내 경제지표 봇`
+4. 봇 username(고유해야 함, 반드시 `bot`으로 끝나야 함)을 입력합니다. 예: `my_econ_alert_bot`
+5. 성공하면 BotFather가 아래처럼 **토큰(token)**을 줍니다. 이 문자열을 복사해두세요(비밀번호처럼 취급).
+   ```
+   Use this token to access the HTTP API:
+   123456789:AAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+   ```
+
+---
+
+## 4. 텔레그램 chat_id 알아내기
+
+봇은 만들었지만 아직 나와 대화한 적이 없는 상태이므로, 먼저 봇과 대화를 시작한 뒤 chat_id를 알아냅니다.
 
 1. 텔레그램 앱에서 만드신 봇을 열고, 아무 메시지나 하나 보냅니다 (예: "안녕").
 2. 브라우저 주소창에 아래 주소를 입력합니다 (YOUR_BOT_TOKEN 자리에 BotFather가 준 토큰을 넣으세요):
@@ -55,7 +72,7 @@ BotFather로 봇은 이미 만드셨고, 봇과 대화(메시지 1개 전송)까
 
 ---
 
-## 4. FRED API 키 발급 (무료, 즉시 발급)
+## 5. FRED API 키 발급 (무료, 즉시 발급)
 
 1. https://fredaccount.stlouisfed.org/apikeys 접속 후 무료 계정 생성/로그인
 2. "Request API Key" 클릭, 용도는 "개인 프로젝트/봇" 정도로 간단히 기입
@@ -65,7 +82,7 @@ BotFather로 봇은 이미 만드셨고, 봇과 대화(메시지 1개 전송)까
 
 ---
 
-## 5. GitHub 리포지토리에 올리기
+## 6. GitHub 리포지토리에 올리기
 
 1. GitHub에서 새 저장소 생성 (예: `econ-indicator-bot`).
    - **Public(공개)으로 만드는 것을 추천**합니다. Public 저장소는 GitHub Actions 실행 시간이 사실상 무제한 무료입니다. (봇 코드 자체에는 토큰/키가 들어있지 않고 전부 Secrets로 분리되어 있어 공개해도 안전합니다.)
@@ -84,28 +101,28 @@ BotFather로 봇은 이미 만드셨고, 봇과 대화(메시지 1개 전송)까
 
 ---
 
-## 6. GitHub Secrets 등록
+## 7. GitHub Secrets 등록
 
 저장소 → **Settings → Secrets and variables → Actions → New repository secret** 에서 아래 3개를 등록하세요.
 
 | Name | 값 |
 |---|---|
-| `TELEGRAM_BOT_TOKEN` | BotFather가 준 토큰 |
-| `TELEGRAM_CHAT_ID` | 3단계에서 확인한 chat_id |
-| `FRED_API_KEY` | 4단계에서 발급받은 키 |
+| `TELEGRAM_BOT_TOKEN` | BotFather가 준 토큰 (3단계) |
+| `TELEGRAM_CHAT_ID` | 4단계에서 확인한 chat_id |
+| `FRED_API_KEY` | 5단계에서 발급받은 키 |
 
 (선택) 같은 화면의 **Variables** 탭에서 `DAILY_DIGEST_TIME_KST`(기본 `07:00`), `DAILY_DIGEST_WINDOW_MINUTES`(기본 `10`)를 원하는 값으로 바꿀 수 있습니다.
 
 ---
 
-## 7. Actions 권한 확인
+## 8. Actions 권한 확인
 
 저장소 → **Settings → Actions → General → Workflow permissions** 에서
 **"Read and write permissions"** 를 선택 후 저장하세요. (state.json을 봇이 스스로 커밋하기 위해 필요합니다.)
 
 ---
 
-## 8. cron-job.org로 "1~5분마다 깨우기" 설정 (핵심)
+## 9. cron-job.org로 "1~5분마다 깨우기" 설정 (핵심)
 
 1. https://cron-job.org 무료 가입
 2. GitHub에서 **Personal Access Token(PAT)** 발급: GitHub 우측상단 프로필 → Settings → Developer settings → Personal access tokens → Fine-grained tokens →
@@ -127,7 +144,7 @@ BotFather로 봇은 이미 만드셨고, 봇과 대화(메시지 1개 전송)까
 
 ---
 
-## 9. 동작 테스트
+## 10. 동작 테스트
 
 1. 저장소 → **Actions** 탭 → `Economic Indicator Bot` 워크플로우 → **Run workflow** 버튼으로 수동 실행해봅니다.
 2. 로그에서 에러가 없는지, 텔레그램으로 메시지가 오는지 확인합니다(단, 오늘 별3개 지표가 없는 날이면 조용할 수 있습니다 - 이건 정상입니다).
@@ -135,7 +152,7 @@ BotFather로 봇은 이미 만드셨고, 봇과 대화(메시지 1개 전송)까
 
 ---
 
-## 10. 다루는 지표 (별3개급, `bot/indicators.py`에서 관리)
+## 11. 다루는 지표 (별3개급, `bot/indicators.py`에서 관리)
 
 | 지표 | 연준 핵심지표 세부해석 |
 |---|---|
@@ -162,7 +179,7 @@ PPI/GDP/JOLTS/신규 실업수당 청구건수는 CPI·PCE와 마찬가지로 �
 
 ---
 
-## 11. 알려진 한계 / 주의사항
+## 12. 알려진 한계 / 주의사항
 
 - **데이터 출처**: 캘린더·예상치·실제치는 ForexFactory의 공개 위젯 피드(`nfs.faireconomy.media/ff_calendar_thisweek.json`)를 사용합니다. investing.com은 Cloudflare 등 봇 차단이 잦아 기본 소스로 쓰지 않았습니다. ForexFactory 피드가 일시적으로 막히거나 형식이 바뀌면 그 주기의 알림이 누락될 수 있습니다(다음 폴링에서 자동 복구 시도).
 - **FRED 반영 시차**: 발표 직후 FRED가 해당 수치를 실시간 반영하지 못하는 경우가 있어, 세부 해석은 결과 발송 후 최소 2분 대기 후 시도하도록 만들었습니다(`bot/main.py`의 `INTERPRETATION_DELAY_MINUTES`). 그래도 안 맞으면 다음 폴링에서 다시 최신 FRED 값으로 갱신해 보내지는 않고, 처음 보낸 값을 유지합니다(중복 스팸 방지 우선). 필요하면 이 로직은 확장 가능합니다.
@@ -172,7 +189,7 @@ PPI/GDP/JOLTS/신규 실업수당 청구건수는 CPI·PCE와 마찬가지로 �
 
 ---
 
-## 12. 로컬에서 테스트하고 싶다면
+## 13. 로컬에서 테스트하고 싶다면
 
 ```bash
 pip install -r requirements.txt
