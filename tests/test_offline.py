@@ -258,6 +258,143 @@ def test_interpret_ppi_jolts_claims_narrative():
     print("test_interpret_ppi_jolts_claims_narrative OK")
 
 
+def test_interpret_fed_lens_hawkish_dovish_directions():
+    """모든 fed_critical 지표 해석에 '연준(Fed) 관점' 문단이 붙고, 방향(매파적/비둘기적 여지)이
+    실제 데이터 방향에 맞게 갈리는지 확인. (금리와의 연관성을 명시적으로 설명해달라는 요청 반영)"""
+
+    # --- NFP: 강한 고용(매파적 여지) vs 약한 고용(비둘기적 여지) ---
+    def fake_latest_level_change_strong(series_id, api_key):
+        return {"change": 250.0}
+
+    def fake_latest_value_strong(series_id, api_key):
+        if series_id == "UNRATE":
+            return {"latest_value": 4.0, "prev_value": 4.1}  # 하락 = 견조
+        if series_id == "CIVPART":
+            return {"latest_value": 62.5}
+        return {}
+
+    with mock.patch.object(fred_client, "latest_level_change", side_effect=fake_latest_level_change_strong), \
+         mock.patch.object(fred_client, "latest_value", side_effect=fake_latest_value_strong), \
+         mock.patch.object(fred_client, "mom_yoy", return_value={}):
+        nfp_strong = interp.interpret_nfp({}, "dummy_key")
+    assert "🏦" in nfp_strong and "매파적 여지" in nfp_strong, nfp_strong
+
+    def fake_latest_level_change_weak(series_id, api_key):
+        return {"change": 50.0}
+
+    def fake_latest_value_weak(series_id, api_key):
+        if series_id == "UNRATE":
+            return {"latest_value": 4.3, "prev_value": 4.1}  # 상승 = 냉각
+        return {}
+
+    with mock.patch.object(fred_client, "latest_level_change", side_effect=fake_latest_level_change_weak), \
+         mock.patch.object(fred_client, "latest_value", side_effect=fake_latest_value_weak), \
+         mock.patch.object(fred_client, "mom_yoy", return_value={}):
+        nfp_weak = interp.interpret_nfp({}, "dummy_key")
+    assert "🏦" in nfp_weak and "비둘기적 여지" in nfp_weak, nfp_weak
+
+    # --- FOMC: 인상/인하/동결에 따라 다른 연준 관점 문구 ---
+    def fake_latest_value_hike(series_id, api_key):
+        if series_id == "DFEDTARU":
+            return {"latest_value": 5.5, "prev_value": 5.25}
+        if series_id == "DFEDTARL":
+            return {"latest_value": 5.25, "prev_value": 5.0}
+        return {}
+
+    with mock.patch.object(fred_client, "latest_value", side_effect=fake_latest_value_hike):
+        fomc_hike = interp.interpret_fomc({}, "dummy_key")
+    assert "인상" in fomc_hike and "물가 안정을" in fomc_hike, fomc_hike
+
+    def fake_latest_value_cut(series_id, api_key):
+        if series_id == "DFEDTARU":
+            return {"latest_value": 5.0, "prev_value": 5.25}
+        if series_id == "DFEDTARL":
+            return {"latest_value": 4.75, "prev_value": 5.0}
+        return {}
+
+    with mock.patch.object(fred_client, "latest_value", side_effect=fake_latest_value_cut):
+        fomc_cut = interp.interpret_fomc({}, "dummy_key")
+    assert "인하" in fomc_cut and "고용·성장 둔화" in fomc_cut, fomc_cut
+
+    # --- GDP: 마이너스 성장(비둘기적) vs 강한 성장(매파적) ---
+    def fake_obs_negative(series_id, api_key, limit=14):
+        return [("2026-04-01", -0.5), ("2026-01-01", 1.0)]
+
+    with mock.patch.object(fred_client, "get_observations", side_effect=fake_obs_negative):
+        gdp_neg = interp.interpret_gdp({"indicator_key": "gdp"}, "dummy_key")
+    assert "🏦" in gdp_neg and "비둘기적 여지" in gdp_neg, gdp_neg
+
+    def fake_obs_hot(series_id, api_key, limit=14):
+        return [("2026-04-01", 3.5), ("2026-01-01", 2.0)]
+
+    with mock.patch.object(fred_client, "get_observations", side_effect=fake_obs_hot):
+        gdp_hot = interp.interpret_gdp({"indicator_key": "gdp"}, "dummy_key")
+    assert "🏦" in gdp_hot and "매파적 여지" in gdp_hot, gdp_hot
+
+    # --- PPI: 근원 PPI 상승 추세(매파적) vs 하락 추세(비둘기적) ---
+    def fake_mom_yoy_ppi_rising(series_id, api_key):
+        if series_id == "PPIFES":
+            return {"mom_pct": 0.4, "yoy_pct": 3.0, "mom_trend_6m": [0.1, 0.1, 0.1, 0.2, 0.3, 0.4]}
+        return {"mom_pct": 0.3, "yoy_pct": 2.0, "mom_trend_6m": []}
+
+    with mock.patch.object(fred_client, "mom_yoy", side_effect=fake_mom_yoy_ppi_rising):
+        ppi_rising = interp.interpret_ppi({}, "dummy_key")
+    assert "🏦" in ppi_rising and "매파적 여지" in ppi_rising, ppi_rising
+
+    def fake_mom_yoy_ppi_falling(series_id, api_key):
+        if series_id == "PPIFES":
+            return {"mom_pct": 0.1, "yoy_pct": 1.5, "mom_trend_6m": [0.4, 0.3, 0.3, 0.2, 0.1, 0.05]}
+        return {"mom_pct": 0.1, "yoy_pct": 1.5, "mom_trend_6m": []}
+
+    with mock.patch.object(fred_client, "mom_yoy", side_effect=fake_mom_yoy_ppi_falling):
+        ppi_falling = interp.interpret_ppi({}, "dummy_key")
+    assert "🏦" in ppi_falling and "비둘기적 여지" in ppi_falling, ppi_falling
+
+    # --- JOLTS: 채용 수요 확대(매파적 여지) vs 둔화(비둘기적 여지) ---
+    def fake_mom_yoy_jolts_rising(series_id, api_key):
+        return {
+            "latest_value": 8200.0,
+            "mom_pct": 1.0,
+            "yoy_pct": 2.0,
+            "mom_trend_6m": [7800.0, 7900.0, 7950.0, 8000.0, 8100.0, 8200.0],
+        }
+
+    with mock.patch.object(fred_client, "mom_yoy", side_effect=fake_mom_yoy_jolts_rising):
+        jolts_rising = interp.interpret_jolts({}, "dummy_key")
+    assert "🏦" in jolts_rising and "매파적 여지" in jolts_rising, jolts_rising
+
+    def fake_mom_yoy_jolts_falling(series_id, api_key):
+        return {
+            "latest_value": 7600.0,
+            "mom_pct": -0.5,
+            "yoy_pct": -3.0,
+            "mom_trend_6m": [8200.0, 8000.0, 7900.0, 7800.0, 7700.0, 7600.0],
+        }
+
+    with mock.patch.object(fred_client, "mom_yoy", side_effect=fake_mom_yoy_jolts_falling):
+        jolts_falling = interp.interpret_jolts({}, "dummy_key")
+    assert "🏦" in jolts_falling and "비둘기적 여지" in jolts_falling, jolts_falling
+
+    # --- 신규 실업수당 청구건수: 냉각(비둘기적) vs 견조(매파적) ---
+    def fake_obs_claims_cooling(series_id, api_key, limit=5):
+        # 최신치가 4주 평균 대비 3% 이상 높음 -> cooling
+        return [("2026-08-08", 250000.0), ("2026-08-01", 220000.0), ("2026-07-25", 215000.0), ("2026-07-18", 210000.0)]
+
+    with mock.patch.object(fred_client, "get_observations", side_effect=fake_obs_claims_cooling):
+        claims_cooling = interp.interpret_initial_claims({}, "dummy_key")
+    assert "🏦" in claims_cooling and "비둘기적 재료" in claims_cooling, claims_cooling
+
+    def fake_obs_claims_tight(series_id, api_key, limit=5):
+        # 최신치가 4주 평균 대비 3% 이상 낮음 -> tight
+        return [("2026-08-08", 190000.0), ("2026-08-01", 220000.0), ("2026-07-25", 225000.0), ("2026-07-18", 215000.0)]
+
+    with mock.patch.object(fred_client, "get_observations", side_effect=fake_obs_claims_tight):
+        claims_tight = interp.interpret_initial_claims({}, "dummy_key")
+    assert "🏦" in claims_tight and "매파적 재료" in claims_tight, claims_tight
+
+    print("test_interpret_fed_lens_hawkish_dovish_directions OK")
+
+
 def test_build_interpretation_message_routes_to_new_functions():
     for key, expected_snippet in [
         ("ppi", "PPI(생산자물가)"),
@@ -322,6 +459,129 @@ def test_main_run_end_to_end():
     for m in sent_messages:
         print("=====")
         print(m)
+
+
+def test_format_t15_alert():
+    kst = datetime.timezone(datetime.timedelta(hours=9))
+    event = {
+        "datetime_kst": datetime.datetime(2026, 8, 13, 21, 30, tzinfo=kst),
+        "name_kr": "소비자물가지수(CPI)",
+        "ff_title": "CPI y/y",
+        "forecast": "3.1%",
+        "previous": "3.0%",
+    }
+    msg = interp.format_t15_alert(event)
+    assert "21:30" in msg
+    assert "CPI y/y" in msg
+    assert "3.1%" in msg
+    assert "⏰" in msg
+    print("test_format_t15_alert OK ->", msg.splitlines()[0])
+
+
+def test_main_run_t15_alert():
+    """발표 15분 이내로 남으면 T-15 알림이 딱 한 번만 나가는지 확인.
+    (같은 상태 파일로 다시 실행해도 중복 발송되면 안 됨)"""
+    from bot import main as botmain
+
+    event_time_kst = datetime.datetime(2026, 8, 13, 21, 30, tzinfo=botmain.KST)
+    payload = [
+        {
+            "title": "CPI y/y",
+            "country": "USD",
+            "date": "2026-08-13T08:30:00-04:00",  # == 21:30 KST
+            "impact": "High",
+            "forecast": "3.1%",
+            "previous": "3.0%",
+            "actual": "",
+        },
+    ]
+
+    tmp_dir = tempfile.mkdtemp()
+    state_path = os.path.join(tmp_dir, "state.json")
+    env = {
+        "TELEGRAM_BOT_TOKEN": "fake-token",
+        "TELEGRAM_CHAT_ID": "12345",
+        "FRED_API_KEY": "",
+        "STATE_PATH": state_path,
+        "DAILY_DIGEST_TIME_KST": "07:00",
+        "DAILY_DIGEST_WINDOW_MINUTES": "10",
+    }
+    sent_messages = []
+
+    def fake_send(token, chat_id, text):
+        sent_messages.append(text)
+
+    def run_at(fixed_now):
+        class FixedDateTime(datetime.datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return fixed_now
+
+        with mock.patch.dict(os.environ, env, clear=False), \
+             mock.patch.object(cal, "fetch_raw_events", return_value=payload), \
+             mock.patch.object(botmain, "send_message", side_effect=fake_send), \
+             mock.patch.object(botmain.datetime, "datetime", FixedDateTime):
+            botmain.run()
+
+    # 1차: 발표 10분 전 -> T-15 알림이 나가야 함
+    run_at(event_time_kst - datetime.timedelta(minutes=10))
+    assert any("⏰" in m for m in sent_messages), f"T-15 알림이 안 나감 -> {sent_messages}"
+    assert any("곧 발표" in m for m in sent_messages), sent_messages
+
+    # 2차: 같은 상태 파일로 5분 전에 다시 실행 -> 이미 보냈으니 중복 발송 안 돼야 함
+    sent_messages.clear()
+    run_at(event_time_kst - datetime.timedelta(minutes=5))
+    assert not any("⏰" in m for m in sent_messages), f"T-15 알림이 중복 발송됨 -> {sent_messages}"
+
+    print("test_main_run_t15_alert OK -> 1차 발송, 2차 중복 방지 확인")
+
+
+def test_main_run_t15_alert_not_triggered_too_early():
+    """발표까지 20분 넘게 남았으면 아직 T-15 알림을 보내면 안 됨."""
+    from bot import main as botmain
+
+    event_time_kst = datetime.datetime(2026, 8, 13, 21, 30, tzinfo=botmain.KST)
+    payload = [
+        {
+            "title": "CPI y/y",
+            "country": "USD",
+            "date": "2026-08-13T08:30:00-04:00",
+            "impact": "High",
+            "forecast": "3.1%",
+            "previous": "3.0%",
+            "actual": "",
+        },
+    ]
+    tmp_dir = tempfile.mkdtemp()
+    state_path = os.path.join(tmp_dir, "state.json")
+    env = {
+        "TELEGRAM_BOT_TOKEN": "fake-token",
+        "TELEGRAM_CHAT_ID": "12345",
+        "FRED_API_KEY": "",
+        "STATE_PATH": state_path,
+        "DAILY_DIGEST_TIME_KST": "07:00",
+        "DAILY_DIGEST_WINDOW_MINUTES": "10",
+    }
+    sent_messages = []
+
+    def fake_send(token, chat_id, text):
+        sent_messages.append(text)
+
+    fixed_now = event_time_kst - datetime.timedelta(minutes=20)
+
+    class FixedDateTime(datetime.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return fixed_now
+
+    with mock.patch.dict(os.environ, env, clear=False), \
+         mock.patch.object(cal, "fetch_raw_events", return_value=payload), \
+         mock.patch.object(botmain, "send_message", side_effect=fake_send), \
+         mock.patch.object(botmain.datetime, "datetime", FixedDateTime):
+        botmain.run()
+
+    assert not any("⏰" in m for m in sent_messages), f"20분 전인데 T-15 알림이 나감 -> {sent_messages}"
+    print("test_main_run_t15_alert_not_triggered_too_early OK")
 
 
 def test_main_run_ppi_stuck_actual_bug_fixed():
@@ -394,7 +654,11 @@ if __name__ == "__main__":
     test_enrich_actual_unemployment_claims()
     test_interpret_gdp_uses_raw_rate_not_mom_yoy()
     test_interpret_ppi_jolts_claims_narrative()
+    test_interpret_fed_lens_hawkish_dovish_directions()
     test_build_interpretation_message_routes_to_new_functions()
+    test_format_t15_alert()
+    test_main_run_t15_alert()
+    test_main_run_t15_alert_not_triggered_too_early()
     test_main_run_end_to_end()
     test_main_run_ppi_stuck_actual_bug_fixed()
     print("\nALL TESTS PASSED")
