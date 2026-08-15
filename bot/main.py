@@ -5,9 +5,11 @@
 매 실행(poll)마다 하는 일:
 1) 오늘자 별3개(★★★)급 미국 지표 목록을 가져온다.
 2) 아직 사전공지를 안 보냈고, 설정된 KST 시각(±허용오차)이면 "오늘 발표 있음" 공지를 보낸다.
-3) 각 지표에 대해 실제치(actual)가 새로 채워졌는데 아직 결과를 안 보냈다면 결과(상회/부합/하회) 메시지를 보낸다.
-4) 결과를 보낸 지 일정 시간(기본 2분) 이상 지났고 아직 해석을 안 보냈다면(연준 핵심지표만) 세부 해석을 보낸다.
-   -> 이렇게 하면 발표 직후엔 수치를, 몇 분 뒤엔 해석을 받아볼 수 있다 (FRED 반영 시차 고려).
+3) 발표까지 15분 이내로 남았고 아직 T-15 알림을 안 보냈다면 "곧 발표됩니다" 알림을 보낸다.
+4) 각 지표에 대해 실제치(actual)가 새로 채워졌는데 아직 결과를 안 보냈다면 결과(상회/부합/하회) 메시지를 보낸다.
+5) 결과를 보낸 지 일정 시간(기본 2분) 이상 지났고 아직 해석을 안 보냈다면(연준 핵심지표만) 세부 해석을 보낸다.
+   -> 이렇게 하면 발표 15분 전엔 예고를, 발표 직후엔 수치를, 몇 분 뒤엔 해석을 받아볼 수 있다
+      (FRED 반영 시차 고려).
 
 이 스크립트는 GitHub Actions 등 외부 스케줄러가 반복 호출하는 것을 전제로 한다.
 자세한 배포 방법은 README.md 참고.
@@ -25,6 +27,7 @@ from .telegram_client import send_message
 
 KST = datetime.timezone(datetime.timedelta(hours=9))
 INTERPRETATION_DELAY_MINUTES = 2  # 결과 발송 후 해석 발송까지 최소 대기 시간
+T15_ALERT_MINUTES = 15  # 발표 이 시간(분) 이내로 남으면 사전 알림을 보낸다
 
 
 def _within_digest_window(now_kst: datetime.datetime, target_hhmm: str, window_min: int) -> bool:
@@ -73,7 +76,20 @@ def run() -> None:
             rec["pre_announced"] = True
             rec["date"] = e["date_kst"]
 
-    # --- 2) 발표 결과 + 3) 세부 해석 -------------------------------------
+    # --- 3) T-15분 사전 알림 ----------------------------------------------
+    # 폴링 주기(1~5분)마다 확인하다가, "발표까지 15분 이내로 남았다"를 처음 감지한
+    # 시점에 딱 한 번만 보낸다(그 뒤로 몇 분 남았든 다시 안 보냄 -> t15_sent로 방지).
+    for e in today_events:
+        rec = state["events"].setdefault(e["event_id"], {"date": e["date_kst"]})
+        if not rec.get("t15_sent"):
+            minutes_until = (e["datetime_kst"] - now_kst).total_seconds() / 60.0
+            if 0 <= minutes_until <= T15_ALERT_MINUTES:
+                msg = interpretation.format_t15_alert(e)
+                send_message(cfg.telegram_bot_token, cfg.telegram_chat_id, msg)
+                rec["t15_sent"] = True
+                rec["date"] = e["date_kst"]
+
+    # --- 4) 발표 결과 + 5) 세부 해석 -------------------------------------
     for e in today_events:
         rec = state["events"].setdefault(
             e["event_id"],
