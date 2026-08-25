@@ -24,13 +24,13 @@
     },
     "91dc62c52fc386fb": {
       "date": "2026-08-26",
-      "interpretation_sent": false,
+      "interpretation_sent": true,
       "result_sent": true,
       "result_sent_at": "2026-08-26T00:00:42.425331+09:00"
     },
     "a330c0f4d589bdcb": {
       "date": "2026-08-26",
-      "interpretation_sent": false,
+      "interpretation_sent": true,
       "result_sent": true,
       "result_sent_at": "2026-08-26T00:00:42.425331+09:00"
     }
