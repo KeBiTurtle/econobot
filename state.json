@@ -25,6 +25,7 @@
     "707a837f5df1dfa4": {
       "date": "2026-08-27",
       "interpretation_sent": true,
+      "pre_announced": true,
       "result_sent": true,
       "result_sent_at": "2026-08-27T00:00:48.394205+09:00"
     },
@@ -45,5 +46,5 @@
       "t15_sent": true
     }
   },
-  "last_daily_digest_date": "2026-08-26"
+  "last_daily_digest_date": "2026-08-27"
 }
