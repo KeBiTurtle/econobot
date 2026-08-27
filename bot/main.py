@@ -58,7 +58,7 @@ def run() -> None:
     # has_actual=False에 계속 막혀서 결과/해석 메시지가 영원히 안 나가는 문제가 생긴다.
     if cfg.fred_api_key and today_events:
         try:
-            fred_client.enrich_actual(today_events, cfg.fred_api_key)
+            fred_client.enrich_actual(today_events, cfg.fred_api_key, event_state=state["events"])
         except Exception as exc:
             print(f"[WARN] FRED actual 보강 실패: {exc}", file=sys.stderr)
             traceback.print_exc()
