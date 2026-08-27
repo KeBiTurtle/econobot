@@ -135,10 +135,48 @@ def _match_actual_series(ff_title_lower: str):
     return None, None
 
 
-def enrich_actual(events, api_key: str):
+def _fetch_latest_for_kind(series_id: str, kind: str, api_key: str, title_l: str):
+    """(관측일자, 포맷된 문자열) 튜플을 반환한다. 값이 없으면 (None, None)."""
+    if kind == "value":
+        lv = latest_value(series_id, api_key)
+        v = lv.get("latest_value")
+        return (lv.get("latest_date"), f"{v:.1f}%") if v is not None else (None, None)
+    if kind == "level_million":
+        lv = latest_value(series_id, api_key)
+        v = lv.get("latest_value")
+        return (lv.get("latest_date"), f"{v / 1000:.2f}M") if v is not None else (None, None)
+    if kind == "level_change":
+        lc = latest_level_change(series_id, api_key)
+        v = lc.get("change")
+        return (lc.get("latest_date"), f"{v:+.0f}K") if v is not None else (None, None)
+    if kind == "level_thousand":
+        lv = latest_value(series_id, api_key)
+        v = lv.get("latest_value")
+        return (lv.get("latest_date"), f"{v / 1000:.0f}K") if v is not None else (None, None)
+    # mom_yoy: 제목에 y/y가 있으면 YoY, 아니면 MoM
+    mv = mom_yoy(series_id, api_key)
+    if not mv:
+        return None, None
+    use_yoy = "y/y" in title_l or "yoy" in title_l
+    val = mv.get("yoy_pct") if use_yoy else mv.get("mom_pct")
+    return (mv.get("latest_date"), f"{val:+.1f}%") if val is not None else (None, None)
+
+
+def enrich_actual(events, api_key: str, event_state=None):
     """캘린더 이벤트 리스트(dict, in-place로 수정)에서 actual이 비어있는데
     FRED로 확인 가능한 지표면 공식 실측치로 채운다. 값을 지어내지 않고, 매칭되는
-    시리즈가 없거나 FRED 호출이 실패하면 조용히 건너뛴다(actual은 빈 채로 유지)."""
+    시리즈가 없거나 FRED 호출이 실패하면 조용히 건너뛴다(actual은 빈 채로 유지).
+
+    event_state: main.py의 state["events"](event_id -> 기록 dict)를 넘겨주면,
+    "이 이벤트를 처음 확인했을 때 FRED에 있던 값(baseline)"을 기록해두고, 그 이후
+    baseline과 다른(=새로 반영된) 관측치가 나타날 때만 actual을 채운다.
+
+    이렇게 하는 이유: FRED는 발표 전에도 '직전 회차'의 값을 계속 갖고 있어서,
+    바로 최신값을 그대로 가져다 쓰면 (a) 아직 발표 전인(심지어 내일 발표할) 지표에
+    직전 발표치를 실측치로 잘못 채워 미리 "발표" 메시지를 보내버리고, 그 바람에
+    (b) result_sent가 이미 True로 찍혀서 정작 진짜 발표가 나온 뒤에는 아무 메시지도
+    안 나가는 문제가 있었다(실제 보고된 버그). event_state가 없으면(하위 호환) 예전처럼
+    즉시 최신값을 사용한다."""
     if not api_key:
         return events
     for e in events:
@@ -149,34 +187,28 @@ def enrich_actual(events, api_key: str):
         if not series_id:
             continue
         try:
-            if kind == "value":
-                lv = latest_value(series_id, api_key)
-                v = lv.get("latest_value")
-                if v is not None:
-                    e["actual"] = f"{v:.1f}%"
-            elif kind == "level_million":
-                lv = latest_value(series_id, api_key)
-                v = lv.get("latest_value")
-                if v is not None:
-                    e["actual"] = f"{v / 1000:.2f}M"  # FRED는 천 단위 -> 백만 단위로 환산
-            elif kind == "level_change":
-                lc = latest_level_change(series_id, api_key)
-                v = lc.get("change")
-                if v is not None:
-                    e["actual"] = f"{v:+.0f}K"
-            elif kind == "level_thousand":
-                lv = latest_value(series_id, api_key)
-                v = lv.get("latest_value")
-                if v is not None:
-                    e["actual"] = f"{v / 1000:.0f}K"  # ForexFactory 표기(예: 202K)와 단위 맞춤
-            else:  # mom_yoy: 제목에 y/y가 있으면 YoY, 아니면 MoM
-                mv = mom_yoy(series_id, api_key)
-                if not mv:
-                    continue
-                use_yoy = "y/y" in title_l or "yoy" in title_l
-                val = mv.get("yoy_pct") if use_yoy else mv.get("mom_pct")
-                if val is not None:
-                    e["actual"] = f"{val:+.1f}%"
+            obs_date, formatted = _fetch_latest_for_kind(series_id, kind, api_key, title_l)
         except Exception:
             continue  # 이 지표 하나 실패해도 나머지는 계속 처리
+        if formatted is None:
+            continue
+
+        if event_state is None or obs_date is None:
+            # event_state가 없으면(하위 호환) 예전처럼 즉시 최신값을 사용한다.
+            # obs_date를 못 구했으면(관측일자 없는 응답 등) baseline 비교가 불가능하니
+            # 안전하게 예전 방식대로 채운다(못 채우고 영원히 비는 것보다는 낫다).
+            e["actual"] = formatted
+            continue
+
+        rec = event_state.setdefault(e.get("event_id"), {})
+        baseline = rec.get("fred_baseline_obs_date")
+        if baseline is None:
+            # 이 이벤트를 처음 확인하는 것이면, 지금 FRED 값이 "새로 나온" 것인지 판단할
+            # 기준이 없다(직전 회차 값일 수도 있음). baseline으로만 기록해두고 이번 실행에서는
+            # 아직 actual을 채우지 않는다 -> 다음 폴링부터 새 값이 나오는지 비교 가능.
+            rec["fred_baseline_obs_date"] = obs_date
+            continue
+        if obs_date == baseline:
+            continue  # baseline과 동일 -> 아직 새 관측치 없음(발표 전이거나 FRED 반영 지연)
+        e["actual"] = formatted  # baseline과 다른 새 관측치 등장 -> 진짜 실측치로 채택
     return events
