@@ -20,6 +20,9 @@ DEFAULT_STATE = {
     #   "result_sent": bool,
     #   "interpretation_sent": bool,
     #   "date": "YYYY-MM-DD",
+    #   "fred_baseline_obs_date": "YYYY-MM-DD",  # 이 지표를 처음 확인했을 때 FRED에 있던 관측치 날짜.
+    #       실제 발표 전까지는 이 값과 동일하게 유지되며, 이 값과 달라진 새 관측치가
+    #       나타나야만 진짜 실측치로 채택한다(직전 발표치를 미리 당겨쓰는 것 방지).
     # }
 }
 
