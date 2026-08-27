@@ -28,7 +28,8 @@
       "interpretation_sent": true,
       "pre_announced": true,
       "result_sent": true,
-      "result_sent_at": "2026-08-27T00:00:48.394205+09:00"
+      "result_sent_at": "2026-08-27T00:00:48.394205+09:00",
+      "t15_sent": true
     },
     "91dc62c52fc386fb": {
       "date": "2026-08-26",
