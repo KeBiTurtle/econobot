@@ -452,6 +452,10 @@ def test_build_interpretation_message_routes_to_new_functions():
 
 
 def test_main_run_end_to_end():
+    """1차 폴링(발표 예정 시각 07:00보다 훨씬 이른, 그리고 CPI/Core CPI 예정 시각(21:30)보다도
+    이른 시각)에서는 사전공지만 나가야 하고, ForexFactory가 (실측 확인된 버그로) actual을
+    예정 시각 전에 미리 채워놨더라도 결과 메시지가 새어나가면 안 된다. 예정 시각을 지난
+    2차 폴링에서야 비로소 결과 메시지가 나가야 한다."""
     from bot import main as botmain
 
     tmp_dir = tempfile.mkdtemp()
@@ -471,31 +475,44 @@ def test_main_run_end_to_end():
     def fake_send(token, chat_id, text):
         sent_messages.append(text)
 
-    fixed_now = datetime.datetime(2026, 8, 13, 7, 0, tzinfo=botmain.KST)
+    def run_at(fixed_now):
+        class FixedDateTime(datetime.datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return fixed_now
 
-    class FixedDateTime(datetime.datetime):
-        @classmethod
-        def now(cls, tz=None):
-            return fixed_now
+        with mock.patch.dict(os.environ, env, clear=False), \
+             mock.patch.object(cal, "fetch_raw_events", return_value=FAKE_FF_PAYLOAD), \
+             mock.patch.object(botmain, "send_message", side_effect=fake_send), \
+             mock.patch.object(botmain.datetime, "datetime", FixedDateTime):
+            botmain.run()
 
-    with mock.patch.dict(os.environ, env, clear=False), \
-         mock.patch.object(cal, "fetch_raw_events", return_value=FAKE_FF_PAYLOAD), \
-         mock.patch.object(botmain, "send_message", side_effect=fake_send), \
-         mock.patch.object(botmain.datetime, "datetime", FixedDateTime):
-        botmain.run()
-
+    # 1차 폴링: 07:00 (지표 예정 시각인 21:30보다 한참 이름) -> 사전공지는 나가되,
+    # Core CPI m/m의 actual이 이미 채워져 있어도(캘린더 소스 버그 재현) 결과 메시지는 아직 새어나가면 안 됨
+    run_at(datetime.datetime(2026, 8, 13, 7, 0, tzinfo=botmain.KST))
     assert sent_messages, "메시지가 하나도 발송되지 않았습니다"
     joined = "\n".join(sent_messages)
     assert "오늘의 별3개" in joined
-    assert "[발표]" in joined  # Core CPI m/m은 actual이 있어 결과 메시지도 함께 나가야 함
+    assert "[발표]" not in joined, \
+        f"예정 시각(21:30) 전인데 결과 메시지가 미리 나감(버그 재현) -> {sent_messages}"
 
     with open(state_path, encoding="utf-8") as f:
         state = json.load(f)
     assert state["last_daily_digest_date"] == "2026-08-13"
+    assert not any(rec.get("result_sent") for rec in state["events"].values())
+
+    # 2차 폴링: 예정 시각(21:30) 이후 -> 이제는 결과 메시지가 나가야 함
+    sent_messages.clear()
+    run_at(datetime.datetime(2026, 8, 13, 22, 0, tzinfo=botmain.KST))
+    joined = "\n".join(sent_messages)
+    assert "[발표]" in joined  # Core CPI m/m은 actual이 있어 결과 메시지도 함께 나가야 함
+
+    with open(state_path, encoding="utf-8") as f:
+        state = json.load(f)
     # Core CPI m/m 이벤트는 result_sent=True 여야 함
     assert any(rec.get("result_sent") for rec in state["events"].values())
 
-    print("test_main_run_end_to_end OK -> 발송된 메시지 수:", len(sent_messages))
+    print("test_main_run_end_to_end OK -> 2차 폴링에서 발송된 메시지 수:", len(sent_messages))
     for m in sent_messages:
         print("=====")
         print(m)
@@ -663,7 +680,9 @@ def test_main_run_ppi_stuck_actual_bug_fixed():
             return {"mom_pct": 0.4, "yoy_pct": 2.1, "mom_trend_6m": []}
         return {}
 
-    fixed_now = datetime.datetime(2026, 8, 13, 9, 0, tzinfo=botmain.KST)  # 발표(08:30 ET) 이후 시점
+    # 발표(08:30 ET = 21:30 KST) 이후 시점. (예전엔 "09:00"으로 잘못 KST/ET를 혼동해서
+    # 실제로는 예정 시각보다 훨씬 이른 시각을 테스트하고 있었음 -> 예정 시각 가드 추가하며 바로잡음)
+    fixed_now = datetime.datetime(2026, 8, 13, 22, 0, tzinfo=botmain.KST)
 
     class FixedDateTime(datetime.datetime):
         @classmethod
@@ -754,6 +773,96 @@ def test_main_run_ppi_does_not_fire_early_and_fires_after_real_release():
     print("test_main_run_ppi_does_not_fire_early_and_fires_after_real_release OK")
 
 
+def test_main_run_self_heals_result_sent_before_scheduled_time():
+    """실제로 보고된 버그 재현(2026-08-27 신규 실업수당 청구건수):
+    ForexFactory 캘린더 피드가 예정 발표 시각(21:30 KST)보다 21시간 넘게 이른 자정 직후에
+    actual을 일시적으로 채워 내보내는 바람에, 그 순간 폴링이 걸려서 result_sent가 True로
+    미리 고정돼버렸다(state.json에서 실측 확인됨: result_sent_at이 00:00:48). 그 여파로
+    진짜 발표(21:30 KST)가 지난 뒤에도 결과 메시지가 영원히 안 나가는 문제가 있었다.
+    -> 예정 시각보다 이르게 찍힌 result_sent 기록을 감지하면 자가치유(재발송 대기로 초기화)해서,
+       진짜 발표 시각이 지나면 결과 메시지가 다시 나가야 한다."""
+    from bot import main as botmain
+    from bot import state as state_mod
+
+    event_dt_kst = datetime.datetime(2026, 8, 27, 21, 30, tzinfo=botmain.KST)
+    event_id = cal.make_event_id("Unemployment Claims", event_dt_kst)
+
+    payload = [
+        {
+            "title": "Unemployment Claims",
+            "country": "USD",
+            "date": "2026-08-27T08:30:00-04:00",  # == 21:30 KST
+            "impact": "Medium",
+            "forecast": "208K",
+            "previous": "206K",
+            "actual": "203K",  # 진짜 발표 후 값(현재 폴링 시점에는 이게 캘린더 소스에 채워져 있음)
+        },
+    ]
+
+    tmp_dir = tempfile.mkdtemp()
+    state_path = os.path.join(tmp_dir, "state.json")
+
+    # 버그 재현: 예정 발표 시각보다 21시간 넘게 이른(자정 직후) 시점에 결과가 이미
+    # "발송된" 상태로 시작 (실제 관측된 state.json 그대로)
+    bogus_sent_at = datetime.datetime(2026, 8, 27, 0, 0, 48, tzinfo=botmain.KST)
+    seed_state = {
+        "last_daily_digest_date": "2026-08-27",
+        "events": {
+            event_id: {
+                "date": "2026-08-27",
+                "pre_announced": True,
+                "t15_sent": True,
+                "result_sent": True,
+                "result_sent_at": bogus_sent_at.isoformat(),
+                "interpretation_sent": True,
+                "fred_baseline_obs_date": "2026-08-15",
+            }
+        },
+    }
+    state_mod.save_state(state_path, seed_state)
+
+    env = {
+        "TELEGRAM_BOT_TOKEN": "fake-token",
+        "TELEGRAM_CHAT_ID": "12345",
+        "FRED_API_KEY": "",
+        "STATE_PATH": state_path,
+        "DAILY_DIGEST_TIME_KST": "07:00",
+        "DAILY_DIGEST_WINDOW_MINUTES": "10",
+    }
+
+    sent_messages = []
+
+    def fake_send(token, chat_id, text):
+        sent_messages.append(text)
+
+    fixed_now = event_dt_kst + datetime.timedelta(minutes=45)  # 진짜 발표 시각이 지난 뒤 폴링
+
+    class FixedDateTime(datetime.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return fixed_now
+
+    with mock.patch.dict(os.environ, env, clear=False), \
+         mock.patch.object(cal, "fetch_raw_events", return_value=payload), \
+         mock.patch.object(botmain, "send_message", side_effect=fake_send), \
+         mock.patch.object(botmain.datetime, "datetime", FixedDateTime):
+        botmain.run()
+
+    joined = "\n".join(sent_messages)
+    assert "[발표]" in joined, f"자가치유가 안 돼서 진짜 발표 후에도 결과 메시지가 안 나감 -> {sent_messages}"
+    assert "203K" in joined, joined
+
+    with open(state_path, encoding="utf-8") as f:
+        final_state = json.load(f)
+    rec = final_state["events"][event_id]
+    assert rec["result_sent"] is True
+    new_sent_at = datetime.datetime.fromisoformat(rec["result_sent_at"])
+    assert new_sent_at >= event_dt_kst, \
+        f"재발송 기록 시각이 여전히 예정 발표 시각 이전임 -> {rec['result_sent_at']}"
+
+    print("test_main_run_self_heals_result_sent_before_scheduled_time OK -> 재발송 확인")
+
+
 if __name__ == "__main__":
     test_parse_value()
     test_compare_label()
@@ -774,4 +883,5 @@ if __name__ == "__main__":
     test_main_run_end_to_end()
     test_main_run_ppi_stuck_actual_bug_fixed()
     test_main_run_ppi_does_not_fire_early_and_fires_after_real_release()
+    test_main_run_self_heals_result_sent_before_scheduled_time()
     print("\nALL TESTS PASSED")
