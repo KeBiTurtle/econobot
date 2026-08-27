@@ -96,7 +96,31 @@ def run() -> None:
             {"date": e["date_kst"], "pre_announced": False, "result_sent": False, "interpretation_sent": False},
         )
 
-        has_actual = bool(e["actual"])
+        # 자가치유: ForexFactory 캘린더 피드가 (실측 확인된 버그로) 예정 발표 시각이 되기도 전에
+        # actual 필드를 일시적으로 채워 내보내는 경우가 있다. 그 순간에 폴링이 걸리면
+        # has_actual=True로 오판해서 진짜 발표 전에 "결과" 메시지를 보내버리고 result_sent가
+        # True로 고정돼, 정작 진짜 발표가 나온 뒤에는 아무 메시지도 안 나가는 문제가 있었다
+        # (실제 발생 확인됨: result_sent_at이 예정 시각보다 훨씬 이른 자정 직후로 찍힘).
+        # -> 발송 기록 시각이 이 이벤트의 예정 발표 시각보다 이르면 무효로 보고 재발송 대기로
+        #    되돌린다.
+        sent_at_str = rec.get("result_sent_at")
+        if rec.get("result_sent") and sent_at_str:
+            try:
+                sent_at = datetime.datetime.fromisoformat(sent_at_str)
+            except ValueError:
+                sent_at = None
+            if sent_at is not None and sent_at < e["datetime_kst"]:
+                print(
+                    f"[INFO] {e['event_id']}: 예정 발표 시각({e['datetime_kst'].isoformat()}) 이전에 "
+                    f"잘못 발송된 결과 감지({sent_at.isoformat()}) -> 재발송 대기로 초기화"
+                )
+                rec["result_sent"] = False
+                rec["interpretation_sent"] = False
+                rec.pop("result_sent_at", None)
+
+        # actual 값이 있어도 아직 예정 발표 시각 전이면(캘린더 소스가 위와 같은 이유로 너무 이르게
+        # 채운 경우) 진짜 발표로 인정하지 않는다. 발표 시각이 지나야만 실측치로 취급한다.
+        has_actual = bool(e["actual"]) and now_kst >= e["datetime_kst"]
 
         if has_actual and not rec.get("result_sent"):
             msg = interpretation.format_result_message(e)
