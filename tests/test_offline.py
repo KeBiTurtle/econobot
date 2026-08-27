@@ -204,6 +204,46 @@ def test_enrich_actual_unemployment_claims():
     print("test_enrich_actual_unemployment_claims OK ->", events[0]["actual"])
 
 
+def test_enrich_actual_baseline_prevents_stale_reuse():
+    """실제로 보고된 버그 재현: 아직 발표 전(혹은 발표 시각이 지나지 않은) 지표에 대해
+    FRED가 여전히 '직전 회차' 값만 갖고 있을 때, 그 값을 실측치로 잘못 채워버리면 안 된다.
+    (1) 처음 확인할 때는 baseline만 기록하고 actual은 비워둬야 하고,
+    (2) FRED 값이 그대로면(=아직 새 발표 없음) 몇 번을 다시 확인해도 계속 비워둬야 하며,
+    (3) 실제로 새 관측치(다른 latest_date)가 나타나야만 그때 actual을 채워야 한다."""
+    event_state = {}
+
+    def make_event():
+        return {"ff_title": "PPI m/m", "actual": "", "forecast": "0.1%", "previous": "0.0%", "event_id": "ppi_evt"}
+
+    def fake_mom_yoy_old(series_id, api_key):
+        # 아직 이번 회차가 발표되지 않아, FRED에는 여전히 직전(7월) 값만 있음
+        return {"latest_date": "2026-07-14", "mom_pct": 0.2, "yoy_pct": 1.8}
+
+    # 1차 확인(발표 전): baseline만 기록, actual은 비어 있어야 함
+    e1 = make_event()
+    with mock.patch.object(fred_client, "mom_yoy", side_effect=fake_mom_yoy_old):
+        fred_client.enrich_actual([e1], "dummy_key", event_state=event_state)
+    assert e1["actual"] == "", f"발표 전인데 실측치가 채워짐(직전 회차 값을 잘못 당겨씀) -> {e1['actual']}"
+    assert event_state["ppi_evt"]["fred_baseline_obs_date"] == "2026-07-14"
+
+    # 2차 확인: 아직도 발표 전, FRED 값 그대로(같은 latest_date) -> 몇 번을 다시 확인해도 비어 있어야 함
+    e2 = make_event()
+    with mock.patch.object(fred_client, "mom_yoy", side_effect=fake_mom_yoy_old):
+        fred_client.enrich_actual([e2], "dummy_key", event_state=event_state)
+    assert e2["actual"] == "", f"동일한 관측치인데 실측치가 채워짐 -> {e2['actual']}"
+
+    # 3차 확인: 실제 발표가 나서 FRED에 새 관측치(다른 latest_date)가 등장 -> 그제서야 actual 채워야 함
+    def fake_mom_yoy_new(series_id, api_key):
+        return {"latest_date": "2026-08-14", "mom_pct": 0.4, "yoy_pct": 2.1}
+
+    e3 = make_event()
+    with mock.patch.object(fred_client, "mom_yoy", side_effect=fake_mom_yoy_new):
+        fred_client.enrich_actual([e3], "dummy_key", event_state=event_state)
+    assert e3["actual"] == "+0.4%", f"새 관측치가 나왔는데 실측치가 안 채워짐 -> {e3['actual']}"
+
+    print("test_enrich_actual_baseline_prevents_stale_reuse OK")
+
+
 def test_interpret_gdp_uses_raw_rate_not_mom_yoy():
     """GDP 시리즈(A191RL1Q225SBEA)는 FRED에 이미 '연율 성장률(%)'로 제공되는 값이라,
     CPI/PCE처럼 mom_yoy()로 이중 퍼센트 계산을 하면 안 된다(예전 버그).
@@ -643,6 +683,77 @@ def test_main_run_ppi_stuck_actual_bug_fixed():
     print("test_main_run_ppi_stuck_actual_bug_fixed OK -> 결과 메시지 정상 발송")
 
 
+def test_main_run_ppi_does_not_fire_early_and_fires_after_real_release():
+    """실제로 보고된 버그 재현: (1) 아직 발표되지 않은 지표를 FRED의 직전 회차 값으로
+    미리 '발표'해버리는 문제, (2) 그 여파로 진짜 발표가 나온 뒤에도 result_sent가 이미
+    True라서 결과 메시지가 영원히 안 나가는 문제. 두 번의 폴링(발표 전 -> 발표 후)에 걸쳐
+    baseline -> 새 관측치 흐름을 재현해 둘 다 고쳐졌는지 확인한다."""
+    from bot import main as botmain
+
+    ppi_payload = [
+        {
+            "title": "PPI m/m",
+            "country": "USD",
+            "date": "2026-08-13T08:30:00-04:00",  # == 21:30 KST
+            "impact": "High",
+            "forecast": "0.1%",
+            "previous": "0.0%",
+            "actual": "",
+        },
+    ]
+
+    tmp_dir = tempfile.mkdtemp()
+    state_path = os.path.join(tmp_dir, "state.json")
+    env = {
+        "TELEGRAM_BOT_TOKEN": "fake-token",
+        "TELEGRAM_CHAT_ID": "12345",
+        "FRED_API_KEY": "dummy_key",
+        "STATE_PATH": state_path,
+        "DAILY_DIGEST_TIME_KST": "07:00",
+        "DAILY_DIGEST_WINDOW_MINUTES": "10",
+    }
+
+    sent_messages = []
+
+    def fake_send(token, chat_id, text):
+        sent_messages.append(text)
+
+    def fake_mom_yoy_old(series_id, api_key):
+        # 발표 전: FRED에는 아직 직전(7월) 값만 있음
+        return {"latest_date": "2026-07-14", "mom_pct": 0.2, "yoy_pct": 1.8, "mom_trend_6m": []}
+
+    def fake_mom_yoy_new(series_id, api_key):
+        # 발표 후: FRED에 새 관측치가 등장
+        return {"latest_date": "2026-08-14", "mom_pct": 0.4, "yoy_pct": 2.1, "mom_trend_6m": []}
+
+    def run_at(fixed_now, mom_yoy_fn):
+        class FixedDateTime(datetime.datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return fixed_now
+
+        with mock.patch.dict(os.environ, env, clear=False), \
+             mock.patch.object(cal, "fetch_raw_events", return_value=ppi_payload), \
+             mock.patch.object(botmain, "send_message", side_effect=fake_send), \
+             mock.patch.object(botmain.datetime, "datetime", FixedDateTime), \
+             mock.patch.object(fred_client, "mom_yoy", side_effect=mom_yoy_fn):
+            botmain.run()
+
+    # 1차 폴링: 발표 시각(21:30 KST)보다 한참 이른 아침 -> 아직 결과 메시지가 나가면 안 됨
+    run_at(datetime.datetime(2026, 8, 13, 7, 0, tzinfo=botmain.KST), fake_mom_yoy_old)
+    assert not any("[발표]" in m for m in sent_messages), \
+        f"발표 전인데 결과 메시지가 미리 나감(버그 재현) -> {sent_messages}"
+
+    # 2차 폴링: 발표 시각 이후, FRED에 새 관측치가 반영됨 -> 이제는 결과 메시지가 나가야 함
+    sent_messages.clear()
+    run_at(datetime.datetime(2026, 8, 13, 22, 0, tzinfo=botmain.KST), fake_mom_yoy_new)
+    joined = "\n".join(sent_messages)
+    assert "[발표]" in joined, f"진짜 발표 후에도 결과 메시지가 안 나감(버그 재현) -> {sent_messages}"
+    assert "+0.4%" in joined, joined
+
+    print("test_main_run_ppi_does_not_fire_early_and_fires_after_real_release OK")
+
+
 if __name__ == "__main__":
     test_parse_value()
     test_compare_label()
@@ -652,6 +763,7 @@ if __name__ == "__main__":
     test_enrich_actual_from_fred()
     test_calendar_source_includes_medium_impact_claims()
     test_enrich_actual_unemployment_claims()
+    test_enrich_actual_baseline_prevents_stale_reuse()
     test_interpret_gdp_uses_raw_rate_not_mom_yoy()
     test_interpret_ppi_jolts_claims_narrative()
     test_interpret_fed_lens_hawkish_dovish_directions()
@@ -661,4 +773,5 @@ if __name__ == "__main__":
     test_main_run_t15_alert_not_triggered_too_early()
     test_main_run_end_to_end()
     test_main_run_ppi_stuck_actual_bug_fixed()
+    test_main_run_ppi_does_not_fire_early_and_fires_after_real_release()
     print("\nALL TESTS PASSED")
