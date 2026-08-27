@@ -25,7 +25,7 @@
     "707a837f5df1dfa4": {
       "date": "2026-08-27",
       "fred_baseline_obs_date": "2026-08-15",
-      "interpretation_sent": false,
+      "interpretation_sent": true,
       "pre_announced": true,
       "result_sent": true,
       "result_sent_at": "2026-08-27T22:35:19.153213+09:00",
