@@ -34,8 +34,9 @@
       "t15_sent": true
     },
     "b60b408dae8185cc": {
-      "date": "2026-09-01"
+      "date": "2026-09-01",
+      "pre_announced": true
     }
   },
-  "last_daily_digest_date": "2026-08-31"
+  "last_daily_digest_date": "2026-09-01"
 }
