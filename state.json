@@ -37,6 +37,9 @@
       "date": "2026-09-01",
       "pre_announced": true,
       "t15_sent": true
+    },
+    "b8c055eb01d5bc0e": {
+      "fred_baseline_obs_date": "2026-08-22"
     }
   },
   "last_daily_digest_date": "2026-09-02"
