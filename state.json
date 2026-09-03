@@ -8,6 +8,9 @@
       "result_sent_at": "2026-08-20T00:00:37.376635+09:00",
       "t15_sent": true
     },
+    "620f7410ab39f856": {
+      "fred_baseline_obs_date": "2026-07-01"
+    },
     "707a837f5df1dfa4": {
       "date": "2026-08-27",
       "fred_baseline_obs_date": "2026-08-15",
@@ -46,6 +49,9 @@
       "result_sent": true,
       "result_sent_at": "2026-09-03T21:35:21.135832+09:00",
       "t15_sent": true
+    },
+    "c9c2ff97b14fd48e": {
+      "fred_baseline_obs_date": "2026-07-01"
     }
   },
   "last_daily_digest_date": "2026-09-03"
