@@ -41,7 +41,8 @@
     "b8c055eb01d5bc0e": {
       "date": "2026-09-03",
       "fred_baseline_obs_date": "2026-08-22",
-      "pre_announced": true
+      "pre_announced": true,
+      "t15_sent": true
     }
   },
   "last_daily_digest_date": "2026-09-03"
