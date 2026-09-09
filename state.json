@@ -1,5 +1,8 @@
 {
   "events": {
+    "084fc37e45a5ce09": {
+      "fred_baseline_obs_date": "2026-07-01"
+    },
     "620f7410ab39f856": {
       "date": "2026-09-04",
       "fred_baseline_obs_date": "2026-07-01",
@@ -34,6 +37,9 @@
       "result_sent_at": "2026-08-26T00:00:42.425331+09:00",
       "t15_sent": true
     },
+    "a5027ccd5ed2ca64": {
+      "fred_baseline_obs_date": "2026-08-29"
+    },
     "b60b408dae8185cc": {
       "date": "2026-09-01",
       "pre_announced": true,
@@ -56,6 +62,9 @@
       "result_sent": true,
       "result_sent_at": "2026-09-04T22:30:30.003410+09:00",
       "t15_sent": true
+    },
+    "e105c5ff43dfd736": {
+      "fred_baseline_obs_date": "2026-07-01"
     }
   },
   "last_daily_digest_date": "2026-09-09"
