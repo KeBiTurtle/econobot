@@ -23,22 +23,6 @@
       "result_sent_at": "2026-08-27T22:35:19.153213+09:00",
       "t15_sent": true
     },
-    "91dc62c52fc386fb": {
-      "date": "2026-08-26",
-      "interpretation_sent": true,
-      "pre_announced": true,
-      "result_sent": true,
-      "result_sent_at": "2026-08-26T00:00:42.425331+09:00",
-      "t15_sent": true
-    },
-    "a330c0f4d589bdcb": {
-      "date": "2026-08-26",
-      "interpretation_sent": true,
-      "pre_announced": true,
-      "result_sent": true,
-      "result_sent_at": "2026-08-26T00:00:42.425331+09:00",
-      "t15_sent": true
-    },
     "a5027ccd5ed2ca64": {
       "date": "2026-09-10",
       "fred_baseline_obs_date": "2026-08-29",
