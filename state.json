@@ -18,7 +18,8 @@
     "97bae65137b1b176": {
       "date": "2026-09-11",
       "fred_baseline_obs_date": "2026-07-01",
-      "pre_announced": true
+      "pre_announced": true,
+      "t15_sent": true
     },
     "a5027ccd5ed2ca64": {
       "date": "2026-09-10",
@@ -34,12 +35,14 @@
     "b71e34ac74841eeb": {
       "date": "2026-09-11",
       "fred_baseline_obs_date": "2026-07-01",
-      "pre_announced": true
+      "pre_announced": true,
+      "t15_sent": true
     },
     "b8b173ac395df651": {
       "date": "2026-09-11",
       "fred_baseline_obs_date": "2026-07-01",
-      "pre_announced": true
+      "pre_announced": true,
+      "t15_sent": true
     },
     "b8c055eb01d5bc0e": {
       "date": "2026-09-03",
@@ -68,7 +71,8 @@
     "fa5c3ed1dffe9559": {
       "date": "2026-09-11",
       "fred_baseline_obs_date": "2026-07-01",
-      "pre_announced": true
+      "pre_announced": true,
+      "t15_sent": true
     }
   },
   "last_daily_digest_date": "2026-09-11"
