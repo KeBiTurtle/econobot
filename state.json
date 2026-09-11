@@ -15,15 +15,6 @@
       "result_sent_at": "2026-09-04T22:30:30.003410+09:00",
       "t15_sent": true
     },
-    "707a837f5df1dfa4": {
-      "date": "2026-08-27",
-      "fred_baseline_obs_date": "2026-08-15",
-      "interpretation_sent": true,
-      "pre_announced": true,
-      "result_sent": true,
-      "result_sent_at": "2026-08-27T22:35:19.153213+09:00",
-      "t15_sent": true
-    },
     "97bae65137b1b176": {
       "date": "2026-09-11",
       "fred_baseline_obs_date": "2026-07-01",
