@@ -8,6 +8,7 @@
     },
     "4f872f34c0d909f0": {
       "date": "2026-09-17",
+      "pre_announced": true,
       "t15_sent": true
     },
     "620f7410ab39f856": {
@@ -20,7 +21,9 @@
       "t15_sent": true
     },
     "675601e5b02ebe0a": {
-      "fred_baseline_obs_date": "2026-09-05"
+      "date": "2026-09-17",
+      "fred_baseline_obs_date": "2026-09-05",
+      "pre_announced": true
     },
     "97bae65137b1b176": {
       "date": "2026-09-11",
@@ -75,6 +78,7 @@
     },
     "cf5aea91abc953e3": {
       "date": "2026-09-17",
+      "pre_announced": true,
       "t15_sent": true
     },
     "e105c5ff43dfd736": {
@@ -93,5 +97,5 @@
       "t15_sent": true
     }
   },
-  "last_daily_digest_date": "2026-09-16"
+  "last_daily_digest_date": "2026-09-17"
 }
