@@ -23,7 +23,7 @@
     "675601e5b02ebe0a": {
       "date": "2026-09-17",
       "fred_baseline_obs_date": "2026-09-05",
-      "interpretation_sent": false,
+      "interpretation_sent": true,
       "pre_announced": true,
       "result_sent": true,
       "result_sent_at": "2026-09-17T21:35:24.589850+09:00",
