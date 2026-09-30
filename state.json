@@ -37,7 +37,10 @@
     "f91629c35f895737": {
       "date": "2026-09-30",
       "fred_baseline_obs_date": "2026-07-01",
+      "interpretation_sent": false,
       "pre_announced": true,
+      "result_sent": true,
+      "result_sent_at": "2026-09-30T21:45:27.551371+09:00",
       "t15_sent": true
     }
   },
