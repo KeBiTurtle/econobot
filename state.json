@@ -21,7 +21,7 @@
     "9d77d3c995214ef4": {
       "date": "2026-10-02",
       "fred_baseline_obs_date": "2026-08-01",
-      "interpretation_sent": false,
+      "interpretation_sent": true,
       "pre_announced": true,
       "result_sent": true,
       "result_sent_at": "2026-10-02T22:25:22.857275+09:00",
@@ -36,7 +36,7 @@
     "e9eab108d0985b04": {
       "date": "2026-10-02",
       "fred_baseline_obs_date": "2026-08-01",
-      "interpretation_sent": false,
+      "interpretation_sent": true,
       "pre_announced": true,
       "result_sent": true,
       "result_sent_at": "2026-10-02T22:25:22.857275+09:00",
