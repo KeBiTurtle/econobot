@@ -12,7 +12,10 @@
     "729d27201ffeb6d6": {
       "date": "2026-10-08",
       "fred_baseline_obs_date": "2026-09-26",
+      "interpretation_sent": false,
       "pre_announced": true,
+      "result_sent": true,
+      "result_sent_at": "2026-10-08T21:35:21.341114+09:00",
       "t15_sent": true
     },
     "766c3cdf7a8003b3": {
