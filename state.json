@@ -3,7 +3,7 @@
     "0e2bfcd144f16e30": {
       "date": "2026-10-14",
       "fred_baseline_obs_date": "2026-08-01",
-      "interpretation_sent": false,
+      "interpretation_sent": true,
       "pre_announced": true,
       "result_sent": true,
       "result_sent_at": "2026-10-14T22:10:26.716250+09:00",
@@ -12,7 +12,7 @@
     "13dc8862ad47fc75": {
       "date": "2026-10-14",
       "fred_baseline_obs_date": "2026-08-01",
-      "interpretation_sent": false,
+      "interpretation_sent": true,
       "pre_announced": true,
       "result_sent": true,
       "result_sent_at": "2026-10-14T22:10:26.716250+09:00",
@@ -54,7 +54,7 @@
     "dc19a9498d4d960d": {
       "date": "2026-10-14",
       "fred_baseline_obs_date": "2026-08-01",
-      "interpretation_sent": false,
+      "interpretation_sent": true,
       "pre_announced": true,
       "result_sent": true,
       "result_sent_at": "2026-10-14T22:10:26.716250+09:00",
@@ -63,7 +63,7 @@
     "e6b3106c6fc01cea": {
       "date": "2026-10-14",
       "fred_baseline_obs_date": "2026-08-01",
-      "interpretation_sent": false,
+      "interpretation_sent": true,
       "pre_announced": true,
       "result_sent": true,
       "result_sent_at": "2026-10-14T22:10:26.716250+09:00",
