@@ -64,7 +64,7 @@
     "b10dffb6519f40e2": {
       "date": "2026-10-15",
       "fred_baseline_obs_date": "2026-10-03",
-      "interpretation_sent": false,
+      "interpretation_sent": true,
       "pre_announced": true,
       "result_sent": true,
       "result_sent_at": "2026-10-15T21:40:36.538625+09:00",
