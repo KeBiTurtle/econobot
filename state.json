@@ -49,7 +49,10 @@
     "9643250e9df96d5c": {
       "date": "2026-10-15",
       "fred_baseline_obs_date": "2026-08-01",
+      "interpretation_sent": false,
       "pre_announced": true,
+      "result_sent": true,
+      "result_sent_at": "2026-10-15T23:25:24.657392+09:00",
       "t15_sent": true
     },
     "9d77d3c995214ef4": {
@@ -82,7 +85,10 @@
     "e1c0a8b1828f87c1": {
       "date": "2026-10-15",
       "fred_baseline_obs_date": "2026-08-01",
+      "interpretation_sent": false,
       "pre_announced": true,
+      "result_sent": true,
+      "result_sent_at": "2026-10-15T23:25:24.657392+09:00",
       "t15_sent": true
     },
     "e6b3106c6fc01cea": {
