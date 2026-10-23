@@ -37,15 +37,6 @@
       "pre_announced": true,
       "t15_sent": true
     },
-    "729d27201ffeb6d6": {
-      "date": "2026-10-08",
-      "fred_baseline_obs_date": "2026-09-26",
-      "interpretation_sent": true,
-      "pre_announced": true,
-      "result_sent": true,
-      "result_sent_at": "2026-10-08T21:35:21.341114+09:00",
-      "t15_sent": true
-    },
     "9643250e9df96d5c": {
       "date": "2026-10-15",
       "fred_baseline_obs_date": "2026-08-01",
