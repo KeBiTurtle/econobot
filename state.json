@@ -27,11 +27,6 @@
       "result_sent_at": "2026-10-29T21:45:27.350800+09:00",
       "t15_sent": true
     },
-    "28e69386af70f24f": {
-      "date": "2026-10-15",
-      "pre_announced": true,
-      "t15_sent": true
-    },
     "308b6b43d9bd4629": {
       "date": "2026-10-29",
       "fred_baseline_obs_date": "2026-10-17",
@@ -44,38 +39,6 @@
     "56f778bd1fbca004": {
       "date": "2026-10-29",
       "pre_announced": true,
-      "t15_sent": true
-    },
-    "6f74084fe318ea93": {
-      "date": "2026-10-15",
-      "pre_announced": true,
-      "t15_sent": true
-    },
-    "9643250e9df96d5c": {
-      "date": "2026-10-15",
-      "fred_baseline_obs_date": "2026-08-01",
-      "interpretation_sent": true,
-      "pre_announced": true,
-      "result_sent": true,
-      "result_sent_at": "2026-10-15T23:25:24.657392+09:00",
-      "t15_sent": true
-    },
-    "b10dffb6519f40e2": {
-      "date": "2026-10-15",
-      "fred_baseline_obs_date": "2026-10-03",
-      "interpretation_sent": true,
-      "pre_announced": true,
-      "result_sent": true,
-      "result_sent_at": "2026-10-15T21:40:36.538625+09:00",
-      "t15_sent": true
-    },
-    "e1c0a8b1828f87c1": {
-      "date": "2026-10-15",
-      "fred_baseline_obs_date": "2026-08-01",
-      "interpretation_sent": true,
-      "pre_announced": true,
-      "result_sent": true,
-      "result_sent_at": "2026-10-15T23:25:24.657392+09:00",
       "t15_sent": true
     },
     "e6c0cd5bf42aec38": {
