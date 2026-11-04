@@ -1,7 +1,9 @@
 {
   "events": {
     "02d1eb4b08f57eb3": {
-      "fred_baseline_obs_date": "2026-10-24"
+      "date": "2026-11-05",
+      "fred_baseline_obs_date": "2026-10-24",
+      "pre_announced": true
     },
     "0f18a3a9e44ab376": {
       "date": "2026-10-22",
@@ -50,5 +52,5 @@
       "t15_sent": true
     }
   },
-  "last_daily_digest_date": "2026-11-04"
+  "last_daily_digest_date": "2026-11-05"
 }
