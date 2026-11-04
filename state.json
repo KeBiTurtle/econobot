@@ -1,5 +1,8 @@
 {
   "events": {
+    "02d1eb4b08f57eb3": {
+      "fred_baseline_obs_date": "2026-10-24"
+    },
     "0f18a3a9e44ab376": {
       "date": "2026-10-22",
       "fred_baseline_obs_date": "2026-10-10",
