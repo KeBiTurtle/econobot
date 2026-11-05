@@ -9,6 +9,9 @@
       "result_sent_at": "2026-11-05T22:35:21.538772+09:00",
       "t15_sent": true
     },
+    "0abc878552fa4f21": {
+      "fred_baseline_obs_date": "2026-09-01"
+    },
     "0f18a3a9e44ab376": {
       "date": "2026-10-22",
       "fred_baseline_obs_date": "2026-10-10",
@@ -49,6 +52,9 @@
       "date": "2026-10-29",
       "pre_announced": true,
       "t15_sent": true
+    },
+    "81aee42336cac0c9": {
+      "fred_baseline_obs_date": "2026-09-01"
     },
     "e6c0cd5bf42aec38": {
       "date": "2026-10-29",
