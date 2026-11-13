@@ -15,38 +15,6 @@
       "pre_announced": true,
       "t15_sent": true
     },
-    "253f8ce95fdc6927": {
-      "date": "2026-10-29",
-      "fred_baseline_obs_date": "2026-04-01",
-      "interpretation_sent": true,
-      "pre_announced": true,
-      "result_sent": true,
-      "result_sent_at": "2026-10-29T22:05:23.782488+09:00",
-      "t15_sent": true
-    },
-    "27d2f482979107c5": {
-      "date": "2026-10-29",
-      "fred_baseline_obs_date": "2026-08-01",
-      "interpretation_sent": true,
-      "pre_announced": true,
-      "result_sent": true,
-      "result_sent_at": "2026-10-29T21:45:27.350800+09:00",
-      "t15_sent": true
-    },
-    "308b6b43d9bd4629": {
-      "date": "2026-10-29",
-      "fred_baseline_obs_date": "2026-10-17",
-      "interpretation_sent": true,
-      "pre_announced": true,
-      "result_sent": true,
-      "result_sent_at": "2026-10-29T21:35:22.574968+09:00",
-      "t15_sent": true
-    },
-    "56f778bd1fbca004": {
-      "date": "2026-10-29",
-      "pre_announced": true,
-      "t15_sent": true
-    },
     "5e9b5c10b36d83af": {
       "date": "2026-11-13",
       "fred_baseline_obs_date": "2026-09-01",
@@ -89,11 +57,6 @@
       "date": "2026-11-13",
       "fred_baseline_obs_date": "2026-09-01",
       "pre_announced": true
-    },
-    "e6c0cd5bf42aec38": {
-      "date": "2026-10-29",
-      "pre_announced": true,
-      "t15_sent": true
     }
   },
   "last_daily_digest_date": "2026-11-13"
