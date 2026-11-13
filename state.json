@@ -18,7 +18,8 @@
     "5e9b5c10b36d83af": {
       "date": "2026-11-13",
       "fred_baseline_obs_date": "2026-09-01",
-      "pre_announced": true
+      "pre_announced": true,
+      "t15_sent": true
     },
     "773ad3c674088841": {
       "date": "2026-11-10",
@@ -56,7 +57,8 @@
     "a1ed985384089189": {
       "date": "2026-11-13",
       "fred_baseline_obs_date": "2026-09-01",
-      "pre_announced": true
+      "pre_announced": true,
+      "t15_sent": true
     }
   },
   "last_daily_digest_date": "2026-11-13"
