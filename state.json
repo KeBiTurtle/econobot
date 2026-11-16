@@ -16,7 +16,8 @@
       "t15_sent": true
     },
     "37bb93f58172f253": {
-      "date": "2026-11-17"
+      "date": "2026-11-17",
+      "pre_announced": true
     },
     "5e9b5c10b36d83af": {
       "date": "2026-11-13",
@@ -34,7 +35,8 @@
       "t15_sent": true
     },
     "7b66410fc14a18ef": {
-      "date": "2026-11-17"
+      "date": "2026-11-17",
+      "pre_announced": true
     },
     "81aee42336cac0c9": {
       "date": "2026-11-06",
@@ -67,5 +69,5 @@
       "t15_sent": true
     }
   },
-  "last_daily_digest_date": "2026-11-16"
+  "last_daily_digest_date": "2026-11-17"
 }
