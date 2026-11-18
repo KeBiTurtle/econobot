@@ -65,7 +65,9 @@
       "t15_sent": true
     },
     "a194143a5aa67456": {
-      "fred_baseline_obs_date": "2026-11-07"
+      "date": "2026-11-19",
+      "fred_baseline_obs_date": "2026-11-07",
+      "pre_announced": true
     },
     "a1ed985384089189": {
       "date": "2026-11-13",
@@ -74,5 +76,5 @@
       "t15_sent": true
     }
   },
-  "last_daily_digest_date": "2026-11-18"
+  "last_daily_digest_date": "2026-11-19"
 }
