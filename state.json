@@ -67,7 +67,7 @@
     "a194143a5aa67456": {
       "date": "2026-11-19",
       "fred_baseline_obs_date": "2026-11-07",
-      "interpretation_sent": false,
+      "interpretation_sent": true,
       "pre_announced": true,
       "result_sent": true,
       "result_sent_at": "2026-11-19T22:35:24.651956+09:00",
