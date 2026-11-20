@@ -1,14 +1,5 @@
 {
   "events": {
-    "02d1eb4b08f57eb3": {
-      "date": "2026-11-05",
-      "fred_baseline_obs_date": "2026-10-24",
-      "interpretation_sent": true,
-      "pre_announced": true,
-      "result_sent": true,
-      "result_sent_at": "2026-11-05T22:35:21.538772+09:00",
-      "t15_sent": true
-    },
     "0abc878552fa4f21": {
       "date": "2026-11-06",
       "fred_baseline_obs_date": "2026-09-01",
