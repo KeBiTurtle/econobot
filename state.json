@@ -6,7 +6,9 @@
       "t15_sent": true
     },
     "45e98692b601b0e6": {
-      "fred_baseline_obs_date": "2026-07-01"
+      "date": "2026-11-25",
+      "fred_baseline_obs_date": "2026-07-01",
+      "pre_announced": true
     },
     "5e9b5c10b36d83af": {
       "date": "2026-11-13",
@@ -29,7 +31,9 @@
       "t15_sent": true
     },
     "82386224657c9b40": {
-      "fred_baseline_obs_date": "2026-09-01"
+      "date": "2026-11-25",
+      "fred_baseline_obs_date": "2026-09-01",
+      "pre_announced": true
     },
     "830754c7bf1c4328": {
       "date": "2026-11-10",
@@ -65,5 +69,5 @@
       "t15_sent": true
     }
   },
-  "last_daily_digest_date": "2026-11-24"
+  "last_daily_digest_date": "2026-11-25"
 }
