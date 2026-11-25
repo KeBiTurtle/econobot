@@ -8,7 +8,8 @@
     "45e98692b601b0e6": {
       "date": "2026-11-25",
       "fred_baseline_obs_date": "2026-07-01",
-      "pre_announced": true
+      "pre_announced": true,
+      "t15_sent": true
     },
     "5e9b5c10b36d83af": {
       "date": "2026-11-13",
@@ -24,7 +25,8 @@
     "82386224657c9b40": {
       "date": "2026-11-25",
       "fred_baseline_obs_date": "2026-09-01",
-      "pre_announced": true
+      "pre_announced": true,
+      "t15_sent": true
     },
     "919320c032b9c884": {
       "date": "2026-11-12",
